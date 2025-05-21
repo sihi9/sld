@@ -19,43 +19,93 @@ class SpikeLogger:
 def log_from_monitors(model, logger: SpikeLogger, epoch: int):
     """
     Logs spike activity and membrane potentials from SpikingJelly monitors.
+    Only logs spikes for batch index 0 and separates by channel if present.
     """
-    if logger.vis_interval  is None or logger.vis_interval  <= 0:
+    if logger.vis_interval is None or logger.vis_interval <= 0:
         return
     if epoch % logger.vis_interval != 0:
         return
+
     print("Logging spikes...")
-    # Log spikes
-    for layer_name in model.output_monitor.monitored_layers:
-        records = model.output_monitor[layer_name]
-        if not records:
-            continue
-        spikes = records[0].detach()  # [T, B, N]
-        
-        spikes_flat = spikes.view(spikes.shape[0], -1).cpu().numpy()  # [T, N]
-
-        fig = visualizing.plot_1d_spikes(
-            spikes=spikes_flat,
-            title=f"Spikes - {layer_name}",
-            xlabel="Time step",
-            ylabel="Neuron index",
-            dpi=150
-        )
-        logger.writer.add_figure(f"spikes/{layer_name}", fig, epoch)
-
-        
+    log_spikes_from_monitor(model, logger, epoch)
 
     print("Logging membrane potentials...")
-    # Log membrane potential heatmap
+    log_membrane_from_monitor(model, logger, epoch)
+
+
+def log_spikes_from_monitor(model, logger: SpikeLogger, epoch: int):
+    """
+    Logs spike activity and membrane potentials from SpikingJelly monitors.
+    Only logs spikes for batch index 0 and separates by channel if present.
+    """
+    for layer_name in model.output_monitor.monitored_layers:
+        records = model.output_monitor[layer_name]
+
+        if not records or len(records) == 0:
+            continue
+
+        spikes = records[0].detach()  # [T, B, ...]
+        print(f"Layer: {layer_name}, Records: {spikes.shape}")
+
+        # Pick only batch 0
+        spikes = spikes[:, 0]  # [T, ...]
+        
+        if spikes.dim() == 2:
+            # [T, N] already (e.g., Linear layers)
+            spikes_flat = spikes.cpu().numpy()
+            fig = visualizing.plot_1d_spikes(
+                spikes=spikes_flat,
+                title=f"Spikes - {layer_name}",
+                xlabel="Time step",
+                ylabel="Neuron index",
+                dpi=150
+            )
+            logger.writer.add_figure(f"spikes/{layer_name}", fig, epoch)
+
+        elif spikes.dim() == 4:
+            # [T, C, H, W] → plot each channel separately
+            T, C, H, W = spikes.shape
+            for c in range(C):
+                spikes_c = spikes[:, c]  # [T, H, W]
+                spikes_flat = spikes_c.view(T, -1).cpu().numpy()  # [T, H*W]
+                fig = visualizing.plot_1d_spikes(
+                    spikes=spikes_flat,
+                    title=f"Spikes - {layer_name}/ch{c}",
+                    xlabel="Time step",
+                    ylabel="Neuron index",
+                    dpi=150
+                )
+                logger.writer.add_figure(f"spikes/{layer_name}/ch{c}", fig, epoch)
+
+        else:
+            print(f"⚠️ Skipped {layer_name}: unexpected shape {spikes.shape}")
+            
+    model.output_monitor.clear_recorded_data()
+    
+    
+def log_membrane_from_monitor(model, logger: SpikeLogger, epoch: int):
+    """
+    Logs membrane potentials from SpikingJelly monitors.
+    Only logs spikes for batch index 0 and separates by channel if present.
+    """
     for layer_name in model.v_monitor.monitored_layers:
         records = model.v_monitor[layer_name]
-        for v_seq in records:
-            if v_seq is None:
-                continue
-            v_seq = v_seq.detach()  # [T, B, N]
-            v_flat = v_seq.view(v_seq.shape[0], -1).cpu()
+
+        if not records or len(records) == 0 or records[0] is None:
+            continue
+        
+        v_seq = records[0].detach()
+      
+        print(f"Layer: {layer_name}, v_seq shape: {v_seq.shape}")
+
+        # Select batch 0
+        v_seq = v_seq[:, 0]  # [T, ...]
+
+        if v_seq.dim() == 2:
+            # [T, N]
+            v_flat = v_seq.cpu().numpy()
             fig = visualizing.plot_2d_heatmap(
-                array=v_flat.numpy(),
+                array=v_flat,
                 title=f"Membrane V[t] - {layer_name}",
                 xlabel='Time step',
                 ylabel='Neuron',
@@ -63,7 +113,22 @@ def log_from_monitors(model, logger: SpikeLogger, epoch: int):
             )
             logger.writer.add_figure(f"membrane/{layer_name}", fig, epoch)
 
-    # Clear for next epoch
-    print("Clearing recorded data...")
-    model.output_monitor.clear_recorded_data()
+        elif v_seq.dim() == 4:
+            # [T, C, H, W]
+            T, C, H, W = v_seq.shape
+            for c in range(C):
+                v_ch = v_seq[:, c]  # [T, H, W]
+                v_flat = v_ch.view(T, -1).cpu().numpy()
+                fig = visualizing.plot_2d_heatmap(
+                    array=v_flat,
+                    title=f"Membrane V[t] - {layer_name}/ch{c}",
+                    xlabel='Time step',
+                    ylabel='Neuron index',
+                    dpi=150
+                )
+                logger.writer.add_figure(f"membrane/{layer_name}/ch{c}", fig, epoch)
+
+        else:
+            print(f"⚠️ Skipped {layer_name}: unexpected shape {v_seq.shape}")
+            
     model.v_monitor.clear_recorded_data()

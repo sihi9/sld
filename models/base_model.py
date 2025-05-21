@@ -84,8 +84,8 @@ class SpikingUNetRNN(nn.Module):
         x_flat = self.flatten(x)                       # [T, B, flat_dim]
         x_latent = self.recurrent(x_flat)              # [T, B, hidden_dim]
 
-        #x_decoded = self.linear_decoder(x_latent)      # [T, B, flat_dim]
-        x_decoded = self.decoder_neuron(x_latent)
+        x_decoded = self.linear_decoder(x_latent)      # [T, B, flat_dim]
+        x_decoded = self.decoder_neuron(x_decoded)
         x_reshaped = x_decoded.view(-1, x.shape[1], self.encoder_channels[1],
                                     self.h_down, self.w_down)  # [T, B, c2, H/4, W/4]
 

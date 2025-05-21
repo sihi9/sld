@@ -1,9 +1,9 @@
 # configs/default.yaml
 
 data:
-  num_samples: 5000
+  num_samples: 100
   batch_size: 4
-  time_steps: 50
+  time_steps: 10
   input_size: [32, 32]
 
 model:
@@ -13,7 +13,7 @@ model:
   hidden_dim: null  # if null, defaults to flattened encoder output
 
 train:
-  epochs: 20
+  epochs: 11
   lr: 0.01
   amp: false
   device: cpu

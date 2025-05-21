@@ -16,6 +16,34 @@ class DemoSegmentationDataset(Dataset):
         return self.num_samples
 
     def __getitem__(self, idx):
+        return self.produce_static_line()
+    
+    def produce_static_line(self):
+        input_tensor = np.zeros((self.T, 1, self.H, self.W), dtype=np.float32)
+        label_tensor = np.zeros((self.T, 1, self.H, self.W), dtype=np.float32)
+
+        # Randomly decide whether to draw in top or bottom half
+        top_half = np.random.rand() < 0.5
+        row_start = 0 if top_half else self.H // 2
+        row_end = self.H // 2 if top_half else self.H
+
+        # Randomly choose a column to draw the line
+        col = np.random.randint(0, self.W)
+
+        for t in range(self.T):
+            x_start = max(0, col - self.line_width // 2)
+            x_end = min(self.W, col + self.line_width // 2 + 1)
+
+            # Draw vertical band in either top or bottom half
+            label_tensor[t, 0, row_start:row_end, x_start:x_end] = 1.0
+            input_tensor[t, 0, row_start:row_end, x_start:x_end] = 1.0
+            input_tensor[t, 0] += np.random.normal(0.0, self.noise_std, (self.H, self.W))
+
+        input_tensor = np.clip(input_tensor, 0.0, 1.0)
+        return torch.from_numpy(input_tensor), torch.from_numpy(label_tensor)
+    
+    
+    def produce_moving_line(self):
         input_tensor = np.zeros((self.T, 1, self.H, self.W), dtype=np.float32)
         label_tensor = np.zeros((self.T, 1, self.H, self.W), dtype=np.float32)
 
@@ -36,7 +64,7 @@ class DemoSegmentationDataset(Dataset):
 
         input_tensor = np.clip(input_tensor, 0.0, 1.0)
         return torch.from_numpy(input_tensor), torch.from_numpy(label_tensor)
-    
+        
 
 def build_demo_dataloader(batch_size=4, time_steps=10, input_size=(128, 128), num_workers=2, num_samples=100):
     dataset = DemoSegmentationDataset(num_samples=num_samples, time_steps=time_steps, input_size=input_size)
@@ -83,7 +111,7 @@ def plot_sample_sequence(inputs, labels, sample_idx=0, save_path=None, show=True
 
 # 🧪 Test visualization
 if __name__ == "__main__":
-    loader = build_demo_dataloader(input_size=(32, 32), time_steps=50)
+    loader = build_demo_dataloader(input_size=(32, 32), time_steps=5)
     for x, y in loader:
         print("Input:", x.shape)  
         print("Label:", y.shape)

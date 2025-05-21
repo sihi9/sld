@@ -30,18 +30,14 @@ def train(model, train_loader, val_loader, optimizer, device,
 
             optimizer.zero_grad()
 
-            if use_amp and scaler is not None:
-                with autocast(device_type=device.split(':')[0]):
-                    outputs = model(inputs)
-                    loss = loss_fn(outputs, targets)
-                scaler.scale(loss).backward()
-                scaler.step(optimizer)
-                scaler.update()
-            else:
-                outputs = model(inputs)
-                loss = loss_fn(outputs, targets)
-                loss.backward()
-                optimizer.step()
+            # todo: use amp
+            outputs = model(inputs)
+            outputs = outputs.mean(dim=0)  # Average over time steps
+            
+            loss = loss_fn(outputs, targets[-1])  # Use the last time step for loss calculation
+            loss.backward()
+            optimizer.step()
+            
 
             functional.reset_net(model)
             running_loss += loss.item()
