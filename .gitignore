@@ -1,0 +1,53 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+
+# Distribution / packaging
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Pytest cache
+.pytest_cache/
+
+# MyPy cache
+.mypy_cache/
+
+# Logs and temporary files
+*.log
+*.out
+*.tmp
+
+# Machine learning artifacts
+*.model
+*.joblib
+*.pkl
+*.ckpt
+
+# TensorBoard log files
+logs/
+events.out.tfevents.*
+
+# Large files
+*.tar
+*.gz
+*.zip
+
+# IDE specific files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS generated files
+.DS_Store
+Thumbs.db

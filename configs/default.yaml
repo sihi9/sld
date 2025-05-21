@@ -1,0 +1,23 @@
+# configs/default.yaml
+
+data:
+  num_samples: 5000
+  batch_size: 4
+  time_steps: 50
+  input_size: [32, 32]
+
+model:
+  in_channels: 1
+  out_channels: 1
+  encoder_channels: [2, 4]
+  hidden_dim: null  # if null, defaults to flattened encoder output
+
+train:
+  epochs: 20
+  lr: 0.01
+  amp: false
+  device: cpu
+
+log:
+  log_dir: runs/demo
+  vis_interval: 5

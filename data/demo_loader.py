@@ -1,0 +1,92 @@
+import torch
+from torch.utils.data import Dataset, DataLoader
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+
+class DemoSegmentationDataset(Dataset):
+    def __init__(self, num_samples=100, time_steps=10, input_size=(128, 128), noise_std=0.2, line_width=3):
+        self.num_samples = num_samples
+        self.T = time_steps
+        self.H, self.W = input_size
+        self.noise_std = noise_std
+        self.line_width = line_width
+
+    def __len__(self):
+        return self.num_samples
+
+    def __getitem__(self, idx):
+        input_tensor = np.zeros((self.T, 1, self.H, self.W), dtype=np.float32)
+        label_tensor = np.zeros((self.T, 1, self.H, self.W), dtype=np.float32)
+
+        # Randomly decide whether to draw in top or bottom half
+        top_half = np.random.rand() < 0.5
+        row_start = 0 if top_half else self.H // 2
+        row_end = self.H // 2 if top_half else self.H
+
+        for t in range(self.T):
+            x_pos = int((t / self.T) * self.W)
+            x_start = max(0, x_pos - self.line_width // 2)
+            x_end = min(self.W, x_pos + self.line_width // 2 + 1)
+
+            # Draw vertical band in either top or bottom half
+            label_tensor[t, 0, row_start:row_end, x_start:x_end] = 1.0
+            input_tensor[t, 0, row_start:row_end, x_start:x_end] = 1.0
+            input_tensor[t, 0] += np.random.normal(0.0, self.noise_std, (self.H, self.W))
+
+        input_tensor = np.clip(input_tensor, 0.0, 1.0)
+        return torch.from_numpy(input_tensor), torch.from_numpy(label_tensor)
+    
+
+def build_demo_dataloader(batch_size=4, time_steps=10, input_size=(128, 128), num_workers=2, num_samples=100):
+    dataset = DemoSegmentationDataset(num_samples=num_samples, time_steps=time_steps, input_size=input_size)
+    return DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+
+
+
+# ---------------------------
+# Visualization utilities
+# ---------------------------
+
+def plot_sample_sequence(inputs, labels, sample_idx=0, save_path=None, show=True):
+    """
+    Plot a sequence of frames (input vs label) for one sample.
+
+    Args:
+        inputs: Tensor [B, T, 1, H, W]
+        labels: Tensor [B, T, 1, H, W]
+        sample_idx: index in batch to visualize
+        save_path: if given, saves the image
+        show: whether to show the plot
+    """
+    T = inputs.shape[1]
+    fig, axs = plt.subplots(T, 2, figsize=(6, 2 * T))
+
+    for t in range(T):
+        axs[t, 0].imshow(inputs[sample_idx, t, 0], cmap='gray', vmin=0, vmax=1)
+        axs[t, 0].set_title(f"Input t={t}")
+        axs[t, 0].axis("off")
+
+        axs[t, 1].imshow(labels[sample_idx, t, 0], cmap='gray', vmin=0, vmax=1)
+        axs[t, 1].set_title(f"Label t={t}")
+        axs[t, 1].axis("off")
+
+    plt.tight_layout()
+    if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path, dpi=150)
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+
+# 🧪 Test visualization
+if __name__ == "__main__":
+    loader = build_demo_dataloader(input_size=(32, 32), time_steps=50)
+    for x, y in loader:
+        print("Input:", x.shape)  
+        print("Label:", y.shape)
+        plot_sample_sequence(x, y, sample_idx=0)
+        break
+    
