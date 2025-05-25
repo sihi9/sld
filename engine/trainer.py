@@ -4,13 +4,14 @@ from spikingjelly.activation_based import functional
 from tqdm import tqdm
 from engine.evaluator import evaluate
 from utils.monitoring import SpikeLogger
+from torch.utils.tensorboard import SummaryWriter
+
 
 def train(model, train_loader, val_loader, optimizer, device,
-          loss_fn=None, scaler=None, epochs=10, use_amp=False, logger=None):
+          loss_fn=None, scaler=None, epochs=10, use_amp=False, logger : SpikeLogger=None):
     """
     Trains the model and evaluates on validation set each epoch.
     """
-    from torch.amp import autocast
     model.to(device)
     model.train()
 
@@ -31,9 +32,7 @@ def train(model, train_loader, val_loader, optimizer, device,
             optimizer.zero_grad()
 
             # todo: use amp
-            outputs = model(inputs)
-            outputs = outputs.mean(dim=0)  # Average over time steps
-            
+            outputs = model(inputs)            
             loss = loss_fn(outputs, targets[-1])  # Use the last time step for loss calculation
             loss.backward()
             optimizer.step()
@@ -44,6 +43,9 @@ def train(model, train_loader, val_loader, optimizer, device,
             total_batches += 1
             loop.set_postfix(train_loss=running_loss / total_batches)
 
+        # Log training loss for the epoch
+        train_loss = running_loss / total_batches
+        logger.log_scalar("Loss/Train", train_loss, epoch)
 
         if logger is not None:
             from utils.monitoring import log_from_monitors
@@ -54,9 +56,17 @@ def train(model, train_loader, val_loader, optimizer, device,
         val_loss, val_iou = evaluate(model, val_loader, device, loss_fn, use_amp)
         print(f"Validation - Loss: {val_loss:.4f}, Mean IoU: {val_iou:.4f}")
 
+
+        # Log validation loss and IoU
+        logger.log_scalar("Loss/Validation", val_loss, epoch)
+        logger.log_scalar("IoU/Validation", val_iou, epoch)
+        
         if val_iou > best_val_iou:
             best_val_iou = val_iou
             print("🟢 New best model found!")
+            # Save model checkpoint
+            torch.save(model.state_dict(), f"{logger.checkpoint_dir}/checkpoint_epoch_{epoch}.pth")
+
 
         # Switch back to train mode for next epoch
         model.train()

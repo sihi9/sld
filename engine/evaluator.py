@@ -37,7 +37,7 @@ def evaluate(model, dataloader, device, loss_fn=None, use_amp=False):
 
             with autocast(device_type=device.split(':')[0]) if use_amp else torch.no_grad():
                 outputs = model(inputs)
-                loss = loss_fn(outputs, targets)
+                loss = loss_fn(outputs, targets[-1])
 
             iou = compute_batch_iou(outputs, targets)
 

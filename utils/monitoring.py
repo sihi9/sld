@@ -5,9 +5,13 @@ from spikingjelly import visualizing
 
 
 class SpikeLogger:
-    def __init__(self, log_dir="./runs", vis_interval=1):
+    def __init__(self, 
+                 log_dir="./runs", 
+                 vis_interval=1,
+                 checkpoint_dir="./checkpoints"):
         self.writer = SummaryWriter(log_dir)
         self.vis_interval = vis_interval
+        self.checkpoint_dir = checkpoint_dir
 
     def log_scalar(self, tag, value, step):
         self.writer.add_scalar(tag, value, step)

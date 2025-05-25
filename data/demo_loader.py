@@ -37,7 +37,8 @@ class DemoSegmentationDataset(Dataset):
             # Draw vertical band in either top or bottom half
             label_tensor[t, 0, row_start:row_end, x_start:x_end] = 1.0
             input_tensor[t, 0, row_start:row_end, x_start:x_end] = 1.0
-            input_tensor[t, 0] += np.random.normal(0.0, self.noise_std, (self.H, self.W))
+            #input_tensor[t, 0] += np.random.normal(0.0, self.noise_std, (self.H, self.W))
+            input_tensor[t, 0] = add_noise(input_tensor[t, 0], chance=0.1)
 
         input_tensor = np.clip(input_tensor, 0.0, 1.0)
         return torch.from_numpy(input_tensor), torch.from_numpy(label_tensor)
@@ -60,11 +61,20 @@ class DemoSegmentationDataset(Dataset):
             # Draw vertical band in either top or bottom half
             label_tensor[t, 0, row_start:row_end, x_start:x_end] = 1.0
             input_tensor[t, 0, row_start:row_end, x_start:x_end] = 1.0
-            input_tensor[t, 0] += np.random.normal(0.0, self.noise_std, (self.H, self.W))
+            
+            input_tensor[t, 0] = add_noise(input_tensor[t, 0], chance=0.1)
 
         input_tensor = np.clip(input_tensor, 0.0, 1.0)
         return torch.from_numpy(input_tensor), torch.from_numpy(label_tensor)
         
+def add_noise(image, chance = 0.1,):
+    """
+    Add noise pixels to the input tensor.
+    """
+    mask = np.random.rand(image.shape[0], image.shape[1]) < chance  
+    image[mask] = 1
+            
+    return image
 
 def build_demo_dataloader(batch_size=4, time_steps=10, input_size=(128, 128), num_workers=2, num_samples=100):
     dataset = DemoSegmentationDataset(num_samples=num_samples, time_steps=time_steps, input_size=input_size)
