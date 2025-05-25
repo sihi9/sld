@@ -1,5 +1,6 @@
 import argparse
 import torch
+import os
 from torch import optim
 from torch.amp import GradScaler
 
@@ -12,6 +13,7 @@ from engine.evaluator import evaluate
 from utils.visualizations import visualize_predictions
 from utils.monitoring import SpikeLogger
 from utils.config import load_config
+from utils.experiment import create_experiment_dir
 
 
 def main():
@@ -45,6 +47,13 @@ def main():
         hidden_dim=cfg.model.hidden_dim
     )
     
+    
+    
+    exp_dir = create_experiment_dir(cfg, args)
+    log_dir = os.path.join(exp_dir, "logs")
+    checkpoint_dir = os.path.join(exp_dir, "checkpoints")
+    
+    
     if args.eval_checkpoint:
         print(f"Running evaluation on {args.eval_checkpoint}...")
         model.load_state_dict(torch.load(args.eval_checkpoint, map_location=cfg.train.device, weights_only=True))
@@ -59,10 +68,11 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=cfg.train.lr)
     scaler = GradScaler() if cfg.train.amp else None
 
+
     # Logger
-    logger = SpikeLogger(log_dir=cfg.log.log_dir, 
-                         checkpoint_dir=cfg.log.checkpoint_dir,
-                         vis_interval=cfg.log.vis_interval)
+    logger = SpikeLogger(log_dir=log_dir, 
+                        checkpoint_dir=checkpoint_dir,
+                        vis_interval=cfg.log.vis_interval)
 
     # Train
     train(model, train_loader, val_loader,
@@ -78,8 +88,19 @@ def main():
     final_loss, final_iou = evaluate(model, val_loader, cfg.train.device, use_amp=cfg.train.amp)
     print(f"Final Loss: {final_loss:.4f}, Final IoU: {final_iou:.4f}")
     
-    torch.save(model.state_dict(), f"{logger.checkpoint_dir}/checkpoint_final.pth")
+    torch.save({
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'scaler_state_dict': scaler.state_dict() if scaler else None,
+        'epoch': cfg.train.epochs,
+        'final_loss': final_loss,
+        'final_iou': final_iou
+    }, os.path.join(logger.checkpoint_dir, 'checkpoint_final.pth'))
     
+    
+    visualize_predictions(model, val_loader, device=cfg.train.device, logger=logger, step=cfg.train.epochs)
+
+
     logger.close()
 
 def parse_args():

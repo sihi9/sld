@@ -5,11 +5,14 @@ from spikingjelly.activation_based import functional
 
 
 
-def visualize_predictions(model, dataloader, device, sample_idx=0, n = 3, time_idx=0):
+def visualize_predictions(model, dataloader, device, sample_idx=0, n=3, time_idx=0, logger=None, step=0):
     """
-    Runs a single batch through the model and visualizes predictions.
-    """
+    Visualizes predictions and optionally logs to TensorBoard.
 
+    Args:
+        logger: SpikeLogger or None. If provided, logs the figure instead of showing.
+        step: Global step or epoch for TensorBoard.
+    """
     model.eval()
     with torch.no_grad():
         for input_seq, label_seq in dataloader:
@@ -17,12 +20,15 @@ def visualize_predictions(model, dataloader, device, sample_idx=0, n = 3, time_i
             label_seq = label_seq.permute(1, 0, 2, 3, 4).to(device)
 
             output_seq = model(input_seq)  # [T, B, 1, H, W]
-            #output_prob = torch.sigmoid(output_seq)
 
-            show_sample_triplet(input_seq.cpu(), 
-                                output_seq.cpu(),
-                                label_seq.cpu(),
-                                n=n)
+            fig = show_sample_triplet(input_seq.cpu(), 
+                                      output_seq.cpu(),
+                                      label_seq.cpu(),
+                                      n=n)
+            if logger:
+                logger.writer.add_figure("predictions/sample_triplet", fig, global_step=step)
+            else:
+                plt.show()
             break  
 
     functional.reset_net(model)
@@ -32,11 +38,8 @@ def show_sample_triplet(input_seq, output_seq, label_seq, n=3, figsize=(8, 8), c
     """
     Plot one triplet of input / output / label frames.
 
-    Args:
-        input_seq: Tensor [T, B, 1, H, W]
-        output_seq: Tensor [T, B, 1, H, W]
-        label_seq: Tensor [T, B, 1, H, W]
-        n: number of samples to visualize
+    Returns:
+        fig: Matplotlib Figure object
     """
     fig, axs = plt.subplots(n, 3, figsize=figsize)
     axs = axs if n > 1 else [axs]
@@ -58,4 +61,4 @@ def show_sample_triplet(input_seq, output_seq, label_seq, n=3, figsize=(8, 8), c
         axs[i][2].set_title("Ground Truth")
         axs[i][2].axis("off")
     plt.tight_layout()
-    plt.show()
+    return fig
