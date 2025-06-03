@@ -22,10 +22,10 @@ class SpikingUNetRNN(nn.Module):
         self.encoder = nn.Sequential(
             layer.Conv2d(in_channels, c1, kernel_size=3, stride=2, padding=1, bias=False),  # H/2 x W/2
             layer.BatchNorm2d(c1),
-            neuron.IFNode(surrogate_function=surrogate.ATan()),
+            neuron.LIFNode(surrogate_function=surrogate.ATan()),
             layer.Conv2d(c1, c2, kernel_size=3, stride=2, padding=1, bias=False),           # H/4 x W/4
             layer.BatchNorm2d(c2),
-            neuron.IFNode(surrogate_function=surrogate.ATan())
+            neuron.LIFNode(surrogate_function=surrogate.ATan())
         )
 
         self.h_down = h // 4
@@ -54,13 +54,18 @@ class SpikingUNetRNN(nn.Module):
 
         functional.set_step_mode(self, step_mode='m')
         
+        # size can be reduced. See: https://spikingjelly.readthedocs.io/zh-cn/latest/activation_based_en/monitor.html
         self.output_monitor = monitor.OutputMonitor(self, neuron.LIFNode)
         self.v_monitor = monitor.AttributeMonitor('v_seq', pre_forward=False, net=self, instance=neuron.LIFNode)
 
+       # Enable voltage recording
+        for m in self.modules():
+            if isinstance(m, neuron.LIFNode):
+                m.store_v_seq = True
 
         with torch.no_grad():
-            self.encoder[0].weight += 0.5 # or another scaling factor
-            self.encoder[3].weight += 0.5  # or another scaling factor
+            self.encoder[0].weight += 0.5 
+            self.encoder[3].weight += 0.5 
             
             self.recurrent.rc.weight *= 5
             self.linear_decoder.weight += 0.5
@@ -69,22 +74,15 @@ class SpikingUNetRNN(nn.Module):
             self.decoder_conv[2].weight += 0.1
 
 
-        # Enable voltage recording
-        for m in self.modules():
-            if isinstance(m, neuron.LIFNode):
-                m.store_v_seq = True
-
-
-
     def forward(self, x: torch.Tensor, return_seq=False):
         # x: [T, B, in_channels, H, W]
         x = self.encoder(x)                            # [T, B, c2, H/4, W/4]
         x_flat = self.flatten(x)                       # [T, B, flat_dim]
         x_latent = self.recurrent(x_flat)              # [T, B, hidden_dim]
 
-        #x_decoded = self.linear_decoder(x_latent)      # [T, B, flat_dim]
-        #x_decoded = self.decoder_neuron(x_decoded)
-        x_reshaped = x_latent.view(-1, x.shape[1], self.encoder_channels[1],
+        x_decoded = self.linear_decoder(x_latent)      # [T, B, flat_dim]
+        x_decoded = self.decoder_neuron(x_decoded)
+        x_reshaped = x_decoded.view(-1, x.shape[1], self.encoder_channels[1],
                                     self.h_down, self.w_down)  # [T, B, c2, H/4, W/4]
 
         x_out = self.decoder_conv(x_reshaped)          # [T, B, out_channels, H, W]
@@ -92,6 +90,6 @@ class SpikingUNetRNN(nn.Module):
         if return_seq:
             return x_out  # [T, B, 1, H, W]
         else:
-            summed = x_out.mean(dim=0)
-            probabilities = torch.sigmoid(summed - 0.5)
+            firing_rate = x_out.mean(dim=0)
+            probabilities = torch.sigmoid(5 * (firing_rate - 0.5))
             return probabilities

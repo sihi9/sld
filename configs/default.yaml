@@ -11,15 +11,13 @@ model:
   out_channels: 1
   encoder_channels: [4, 8]
   hidden_dim: null  # if null, defaults to flattened encoder output
-  name: demo_model
+  name: demo_model_recurrent
 
 train:
-  epochs: 11
+  epochs: 31
   lr: 0.001
   amp: false
   device: cpu
 
 log:
-  log_dir: runs/demo
-  checkpoint_dir: checkpoints
-  vis_interval: 5
+  vis_interval: 10
