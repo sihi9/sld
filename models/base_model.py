@@ -101,6 +101,7 @@ class SpikingUNetRNN(nn.Module):
             return v_seq
         else:
             v_mean = v_seq.mean(dim=0)  # [B, 1, H, W]
+            #logits = 5* (v_mean - 1)
             logits = self.output_scale * (v_mean - self.output_bias)
             probs = torch.sigmoid(logits)
             return probs

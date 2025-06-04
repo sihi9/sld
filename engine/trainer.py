@@ -74,7 +74,7 @@ def train(model,
             best_val_iou = val_iou
             print("🟢 New best model found!")
             # Save model checkpoint
-            
+            print(f"Scale: {model.output_scale}, Bias: {model.output_bias}")
             if save_intermediate:
                 torch.save(model.state_dict(), f"{logger.checkpoint_dir}/checkpoint_epoch_{epoch}.pth")
             else:
