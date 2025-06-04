@@ -81,7 +81,8 @@ def main():
           scaler=scaler, 
           epochs=cfg.train.epochs,
           use_amp=cfg.train.amp, 
-          logger=logger)
+          logger=logger,
+          save_intermediate=cfg.train.save_intermediate,)
 
     # Final evaluation
     print("Running final evaluation on validation set...")

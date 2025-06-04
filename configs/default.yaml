@@ -18,6 +18,7 @@ train:
   lr: 0.001
   amp: false
   device: cpu
+  save_intermediate: false
 
 log:
   vis_interval: 10

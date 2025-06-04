@@ -7,8 +7,17 @@ from utils.monitoring import SpikeLogger
 from torch.utils.tensorboard import SummaryWriter
 
 
-def train(model, train_loader, val_loader, optimizer, device,
-          loss_fn=None, scaler=None, epochs=10, use_amp=False, logger : SpikeLogger=None):
+def train(model, 
+          train_loader, 
+          val_loader, 
+          optimizer, 
+          device,
+          loss_fn=None, 
+          scaler=None, 
+          epochs=10, 
+          use_amp=False, 
+          logger : SpikeLogger=None,
+          save_intermediate=False):
     """
     Trains the model and evaluates on validation set each epoch.
     """
@@ -65,7 +74,11 @@ def train(model, train_loader, val_loader, optimizer, device,
             best_val_iou = val_iou
             print("🟢 New best model found!")
             # Save model checkpoint
-            torch.save(model.state_dict(), f"{logger.checkpoint_dir}/checkpoint_epoch_{epoch}.pth")
+            
+            if save_intermediate:
+                torch.save(model.state_dict(), f"{logger.checkpoint_dir}/checkpoint_epoch_{epoch}.pth")
+            else:
+                torch.save(model.state_dict(), f"{logger.checkpoint_dir}/checkpoint_latest.pth")
 
 
         # Switch back to train mode for next epoch
