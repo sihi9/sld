@@ -1,0 +1,4 @@
+Started: 20250604_134649
+Device: cpu
+AMP: False
+Description: N/A

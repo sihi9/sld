@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 from spikingjelly.activation_based import layer, neuron, surrogate, functional, monitor
+from .LINode import LeakyIntegrator
+
 
 class SpikingUNetRNN(nn.Module):
     def __init__(self, in_channels=1, out_channels=1,
@@ -13,6 +15,10 @@ class SpikingUNetRNN(nn.Module):
         self.hidden_dim = hidden_dim
         self.encoder_channels = encoder_channels
       
+        # Output scaling and bias parameters
+        self.output_scale = nn.Parameter(torch.tensor(5.0))
+        self.output_bias = nn.Parameter(torch.tensor(0.5))
+
 
         h, w = input_size
         assert h % 4 == 0 and w % 4 == 0, "Input size must be divisible by 4 for 2x stride-2 downsamples."
@@ -49,7 +55,7 @@ class SpikingUNetRNN(nn.Module):
             layer.ConvTranspose2d(c2, c1, kernel_size=4, stride=2, padding=1, bias=False),  # H/2 x W/2
             neuron.LIFNode(surrogate_function=surrogate.ATan()),
             layer.ConvTranspose2d(c1, out_channels, kernel_size=4, stride=2, padding=1, bias=False),  # H x W
-            neuron.LIFNode(surrogate_function=surrogate.ATan())
+            LeakyIntegrator()
         )
 
         functional.set_step_mode(self, step_mode='m')
@@ -87,9 +93,14 @@ class SpikingUNetRNN(nn.Module):
 
         x_out = self.decoder_conv(x_reshaped)          # [T, B, out_channels, H, W]
         
-        if return_seq:
-            return x_out  # [T, B, 1, H, W]
+        # --- Use membrane potential instead of spike output ---
+        v_seq = self.decoder_conv[-1].v_seq  # [T, B, out_channels, H, W]
+    
+            
+        if return_seq: # todo: this does not work yet
+            return v_seq
         else:
-            firing_rate = x_out.mean(dim=0)
-            probabilities = torch.sigmoid(5 * (firing_rate - 0.5))
-            return probabilities
+            v_mean = v_seq.mean(dim=0)  # [B, 1, H, W]
+            logits = self.output_scale * (v_mean - self.output_bias)
+            probs = torch.sigmoid(logits)
+            return probs
