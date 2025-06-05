@@ -45,9 +45,9 @@ def show_sample_triplet(input_seq, output_seq, label_seq, n=3, figsize=(8, 8), c
     axs = axs if n > 1 else [axs]
     
     for i in range(n):
-        input_img = input_seq[0, i, 0].cpu().numpy()
+        input_img = input_seq[-1, i, 0].cpu().numpy()
         output_img = output_seq[i, 0].detach().cpu().numpy()
-        label_img = label_seq[0, i, 0].cpu().numpy()
+        label_img = label_seq[-1, i, 0].cpu().numpy()
 
         axs[i][0].imshow(input_img, cmap=cmap)
         axs[i][0].set_title(f"Input #{i}")

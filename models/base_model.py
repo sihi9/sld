@@ -6,14 +6,19 @@ from .LINode import LeakyIntegrator
 
 class SpikingUNetRNN(nn.Module):
     def __init__(self, in_channels=1, out_channels=1,
-                 input_size=(128, 128), hidden_dim=4096,
-                 encoder_channels=(2, 4)):
+                 recurrent=True,
+                 input_size=(128, 128), 
+                 hidden_dim=4096, # currently unused
+                 encoder_channels=(2, 4),
+                 output_timesteps=1):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
+        self.recurrent = recurrent
         self.input_size = input_size  # (H, W)
         self.hidden_dim = hidden_dim
         self.encoder_channels = encoder_channels
+        self.output_timesteps = output_timesteps
       
         # Output scaling and bias parameters
         self.output_scale = nn.Parameter(torch.tensor(5.0))
@@ -46,9 +51,11 @@ class SpikingUNetRNN(nn.Module):
             out_features=self.flat_dim,
             bias=True
         )
+        self.feedforward_bottleneck = layer.Linear(self.flat_dim, self.flat_dim)
+
 
         # --- Decoder ---
-        self.linear_decoder = nn.Linear(self.flat_dim, self.flat_dim, bias=False)
+        self.linear_decoder = layer.Linear(self.flat_dim, self.flat_dim, bias=False)
         self.decoder_neuron = neuron.LIFNode(surrogate_function=surrogate.ATan())
 
         self.decoder_conv = nn.Sequential(
@@ -83,8 +90,13 @@ class SpikingUNetRNN(nn.Module):
     def forward(self, x: torch.Tensor, return_seq=False):
         # x: [T, B, in_channels, H, W]
         x = self.encoder(x)                            # [T, B, c2, H/4, W/4]
-        x_flat = self.flatten(x)                       # [T, B, flat_dim]
-        x_latent = self.recurrent(x_flat)              # [T, B, hidden_dim]
+        x_flat = self.flatten(x)      
+         
+        # [T, B, flat_dim]
+        if self.recurrent:
+            x_latent = self.recurrent(x_flat)
+        else:
+            x_latent = self.feedforward_bottleneck(x_flat)  
 
         x_decoded = self.linear_decoder(x_latent)      # [T, B, flat_dim]
         x_decoded = self.decoder_neuron(x_decoded)
@@ -100,8 +112,22 @@ class SpikingUNetRNN(nn.Module):
         if return_seq: # todo: this does not work yet
             return v_seq
         else:
-            v_mean = v_seq.mean(dim=0)  # [B, 1, H, W]
-            #logits = 5* (v_mean - 1)
-            logits = self.output_scale * (v_mean - self.output_bias)
-            probs = torch.sigmoid(logits)
-            return probs
+            v_agg = self.aggregate_output(v_seq)        # [B, 1, H, W]
+            logits = self.output_scale * (v_agg - self.output_bias)
+            probabilities = torch.sigmoid(logits)
+            return probabilities
+        
+    def aggregate_output(self, v_seq: torch.Tensor):
+        """
+        Aggregate the output from the sequence of membrane potentials.
+        v_seq: [T, B, 1, H, W]
+        returns: [B, 1, H, W]
+        """
+        if self.output_timesteps == 1:
+            v_out = v_seq[-1]
+        elif self.output_timesteps > 1:
+            v_out = v_seq[-self.output_timesteps:].mean(dim=0)
+        else:  # e.g., -1 means use all time steps
+            v_out = v_seq.mean(dim=0)
+        return v_out
+

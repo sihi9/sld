@@ -10,7 +10,10 @@ class DemoSegmentationDataset(Dataset):
                  time_steps=10, 
                  input_size=(128, 128), 
                  line_width=3, 
-                 moving=False):
+                 moving=False,
+                 noise=0.1,
+                 heavy_noise=0.4,
+                 heavy_noise_prob=0.3):
         """
         Initializes the dataset.
         Args:
@@ -26,18 +29,23 @@ class DemoSegmentationDataset(Dataset):
         self.H, self.W = input_size
         self.line_width = line_width
         self.moving = moving  # If True, produces moving lines; otherwise static lines
+        self.noise = noise
+        self.heavy_noise = heavy_noise
+        self.heavy_noise_prob = heavy_noise_prob
 
     def __len__(self):
         return self.num_samples
 
     def __getitem__(self, idx):
         if self.moving:
-            input_tensor, label_tensor = self.produce_moving_line()
+            input_tensor, label_tensor = self.produce_moving_line(heavy_noise_prob=self.heavy_noise_prob,
+                                                                  heavy_noise=self.heavy_noise)
         else:
-            input_tensor, label_tensor = self.produce_static_line()
+            input_tensor, label_tensor = self.produce_static_line(noise=self.noise)
         return input_tensor, label_tensor            
     
-    def produce_static_line(self):
+    
+    def produce_static_line(self, noise=0.1):
         input_tensor = np.zeros((self.T, 1, self.H, self.W), dtype=np.float32)
         label_tensor = np.zeros((self.T, 1, self.H, self.W), dtype=np.float32)
 
@@ -56,50 +64,60 @@ class DemoSegmentationDataset(Dataset):
             # Draw vertical band in either top or bottom half
             label_tensor[t, 0, row_start:row_end, x_start:x_end] = 1.0
             input_tensor[t, 0, row_start:row_end, x_start:x_end] = 1.0
-            input_tensor[t, 0] = add_noise(input_tensor[t, 0], chance=0.1)
+            input_tensor[t, 0] = add_noise(input_tensor[t, 0], chance=self.noise, flip=True)
 
         input_tensor = np.clip(input_tensor, 0.0, 1.0)
         return torch.from_numpy(input_tensor), torch.from_numpy(label_tensor)
     
     
-    def produce_moving_line(self):
+    def produce_moving_line(self, heavy_noise_prob=0.2, heavy_noise=0.4):
         input_tensor = np.zeros((self.T, 1, self.H, self.W), dtype=np.float32)
         label_tensor = np.zeros((self.T, 1, self.H, self.W), dtype=np.float32)
 
-        # Randomly decide whether to draw in top or bottom half
         top_half = np.random.rand() < 0.5
         row_start = 0 if top_half else self.H // 2
         row_end = self.H // 2 if top_half else self.H
 
-        # Randomly choose a starting position and calculate the movement range
         start_col = np.random.randint(0, self.W - self.W // 4)
         end_col = start_col + self.W // 4
 
         for t in range(self.T):
-            # Calculate the current column position based on time step
             col_pos = int(start_col + (t / self.T) * (end_col - start_col))
             x_start = max(0, col_pos - self.line_width // 2)
             x_end = min(self.W, col_pos + self.line_width // 2 + 1)
 
-            # Draw vertical band in the input tensor
             input_tensor[t, 0, row_start:row_end, x_start:x_end] = 1.0
-            input_tensor[t, 0] = add_noise(input_tensor[t, 0], chance=0.1)
 
-        # Set the label tensor to the final position for all timesteps
+            # Decide whether to corrupt this frame
+            is_corrupt = np.random.rand() < heavy_noise_prob
+            
+            # Noise level based on corruption
+            noise_chance = heavy_noise if is_corrupt else self.noise
+            input_tensor[t, 0] = add_noise(input_tensor[t, 0], chance=noise_chance, flip=True)
+
         final_x_start = max(0, end_col - self.line_width // 2)
         final_x_end = min(self.W, end_col + self.line_width // 2 + 1)
         label_tensor[:, 0, row_start:row_end, final_x_start:final_x_end] = 1.0
 
         input_tensor = np.clip(input_tensor, 0.0, 1.0)
         return torch.from_numpy(input_tensor), torch.from_numpy(label_tensor)
+    
+    
         
-def add_noise(image, chance = 0.1,):
+def add_noise(image, chance=0.1, flip=True):
     """
-    Add noise pixels to the input tensor.
+    Add or flip noise pixels in the input tensor.
+
+    Parameters:
+    - image: 2D numpy array
+    - chance: per-pixel probability of flipping
+    - flip: if True, flips pixels (0→1, 1→0); otherwise sets to 1
     """
-    mask = np.random.rand(image.shape[0], image.shape[1]) < chance  
-    image[mask] = 1
-            
+    mask = np.random.rand(*image.shape) < chance
+    if flip:
+        image[mask] = 1.0 - image[mask]  # flip 0↔1
+    else:
+        image[mask] = 1.0
     return image
 
 def build_demo_dataloader(batch_size=4, 
@@ -107,7 +125,10 @@ def build_demo_dataloader(batch_size=4,
                           input_size=(128, 128), 
                           num_workers=2, 
                           num_samples=100,
-                          moving=False):
+                          moving=False,
+                          noise=0.1,
+                          heavy_noise=0.4,
+                          heavy_noise_prob=0.3):
     """
     Build a DataLoader for the demo segmentation dataset.
     Args:
@@ -119,9 +140,13 @@ def build_demo_dataloader(batch_size=4,
         moving: If True, produces moving lines; otherwise static lines.
     """
     dataset = DemoSegmentationDataset(num_samples=num_samples, 
-                                      time_steps=time_steps, 
-                                      input_size=input_size,
-                                      moving=moving)
+                                        time_steps=time_steps, 
+                                        input_size=input_size,
+                                        line_width=3,
+                                        moving=moving,
+                                        noise=noise,
+                                        heavy_noise=heavy_noise,
+                                        heavy_noise_prob=heavy_noise_prob)
     
     return DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
@@ -166,7 +191,13 @@ def plot_sample_sequence(inputs, labels, sample_idx=0, save_path=None, show=True
 
 # Test visualization
 if __name__ == "__main__":
-    loader = build_demo_dataloader(input_size=(32, 32), time_steps=10, moving=True)
+    loader = build_demo_dataloader(input_size=(32, 32), 
+                                   time_steps=10,
+                                   num_samples=1, 
+                                   moving=True,
+                                   noise=0.1,
+                                   heavy_noise=0.4,
+                                   heavy_noise_prob=0.3)
     for x, y in loader:
         print("Input:", x.shape)  
         print("Label:", y.shape)

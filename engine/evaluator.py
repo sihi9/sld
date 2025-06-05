@@ -1,8 +1,46 @@
 import torch
 import torch.nn.functional as F
+import os
 from spikingjelly.activation_based import functional
 from tqdm import tqdm
 from torch.amp import autocast
+
+
+def run_final_evaluation_and_save(
+    model: torch.nn.Module,
+    val_loader,
+    optimizer,
+    scaler,
+    cfg,
+    checkpoint_dir: str
+) -> None:
+    """
+    Evaluates the model and saves the final checkpoint with metrics and state.
+
+    Args:
+        model: Trained model.
+        val_loader: Validation dataloader.
+        optimizer: Optimizer instance.
+        scaler: AMP GradScaler, or None.
+        cfg: Configuration object.
+        checkpoint_dir: Directory where checkpoint will be saved.
+    """
+    print("Running final evaluation on validation set...")
+    final_loss, final_iou = evaluate(model, val_loader, cfg.train.device, use_amp=cfg.train.amp)
+    print(f"Final Loss: {final_loss:.4f}, Final IoU: {final_iou:.4f}")
+
+    checkpoint = {
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'scaler_state_dict': scaler.state_dict() if scaler else None,
+        'epoch': cfg.train.epochs,
+        'final_loss': final_loss,
+        'final_iou': final_iou
+    }
+
+    path = os.path.join(checkpoint_dir, 'checkpoint_final.pth')
+    torch.save(checkpoint, path)
+    print(f"Final checkpoint saved to {path}")
 
 
 def evaluate(model, dataloader, device, loss_fn=None, use_amp=False):

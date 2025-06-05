@@ -19,6 +19,9 @@ class SpikeLogger:
     def close(self):
         self.writer.close()
 
+    def log_text(self, tag, text_string, step=0):
+        self.writer.add_text(tag, text_string, step)
+
 
 def log_from_monitors(model, logger: SpikeLogger, epoch: int):
     """

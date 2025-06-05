@@ -1,4 +1,6 @@
 # configs/default.yaml
+description: >
+  sequence training without recurrent layer using only last timestep membrane potential as outout
 
 data:
   num_samples: 1000
@@ -6,13 +8,18 @@ data:
   time_steps: 10
   input_size: [32, 32]
   moving: true
+  noise: 0.1
+  heavy_noise: 0.4  # to simulate image with e.g. bumps in the road
+  heavy_noise_prob: 0.3
 
 model:
   in_channels: 1
   out_channels: 1
   encoder_channels: [4, 8]
   hidden_dim: null  # if null, defaults to flattened encoder output
-  name: demo_model_recurrent_membrane
+  name: demo_model_membrane_sequence
+  recurrent: false
+  output_timesteps: 1
 
 train:
   epochs: 31
