@@ -5,6 +5,7 @@ data:
   batch_size: 4
   time_steps: 10
   input_size: [32, 32]
+  moving: true
 
 model:
   in_channels: 1

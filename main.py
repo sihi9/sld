@@ -29,13 +29,15 @@ def main():
         batch_size=cfg.data.batch_size,
         time_steps=cfg.data.time_steps,
         input_size=tuple(cfg.data.input_size),
-        num_samples=int(cfg.data.num_samples * 0.8)
+        num_samples=int(cfg.data.num_samples * 0.8),
+        moving=cfg.data.moving,
     )
     val_loader = build_demo_dataloader(
         batch_size=cfg.data.batch_size,
         time_steps=cfg.data.time_steps,
         input_size=tuple(cfg.data.input_size),
-        num_samples=int(cfg.data.num_samples * 0.2)
+        num_samples=int(cfg.data.num_samples * 0.2),
+        moving=cfg.data.moving,
     )
 
     # Model
