@@ -30,7 +30,7 @@ def log_from_monitors(model, logger: SpikeLogger, epoch: int):
     """
     if logger.vis_interval is None or logger.vis_interval <= 0:
         return
-    if epoch % logger.vis_interval != 0:
+    if (epoch + 1) % logger.vis_interval != 0:
         return
 
     print("Logging spikes...")
@@ -52,7 +52,7 @@ def log_spikes_from_monitor(model, logger: SpikeLogger, epoch: int):
             continue
 
         spikes = records[0].detach()  # [T, B, ...]
-        print(f"Layer: {layer_name}, Records: {spikes.shape}")
+        #print(f"Layer: {layer_name}, Records: {spikes.shape}")
 
         # Pick only batch 0
         spikes = spikes[:, 0]  # [T, ...]
@@ -87,8 +87,6 @@ def log_spikes_from_monitor(model, logger: SpikeLogger, epoch: int):
         else:
             print(f"⚠️ Skipped {layer_name}: unexpected shape {spikes.shape}")
             
-    model.output_monitor.clear_recorded_data()
-    
     
 def log_membrane_from_monitor(model, logger: SpikeLogger, epoch: int):
     """
@@ -103,7 +101,7 @@ def log_membrane_from_monitor(model, logger: SpikeLogger, epoch: int):
         
         v_seq = records[0].detach()
       
-        print(f"Layer: {layer_name}, v_seq shape: {v_seq.shape}")
+        #print(f"Layer: {layer_name}, v_seq shape: {v_seq.shape}")
 
         # Select batch 0
         v_seq = v_seq[:, 0]  # [T, ...]
@@ -137,5 +135,3 @@ def log_membrane_from_monitor(model, logger: SpikeLogger, epoch: int):
 
         else:
             print(f"⚠️ Skipped {layer_name}: unexpected shape {v_seq.shape}")
-            
-    model.v_monitor.clear_recorded_data()

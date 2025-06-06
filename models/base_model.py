@@ -71,7 +71,7 @@ class SpikingUNetRNN(nn.Module):
         self.output_monitor = monitor.OutputMonitor(self, neuron.LIFNode)
         self.v_monitor = monitor.AttributeMonitor('v_seq', pre_forward=False, net=self, instance=neuron.LIFNode)
 
-       # Enable voltage recording
+        # Enable voltage recording
         for m in self.modules():
             if isinstance(m, neuron.LIFNode):
                 m.store_v_seq = True

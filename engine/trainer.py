@@ -59,7 +59,7 @@ def train(model,
 
         if logger is not None:
             from utils.monitoring import log_from_monitors
-            #log_from_monitors(model, logger, epoch)
+            log_from_monitors(model, logger, epoch)
             visualize_weights(
                 model, 
                 logger, 
@@ -69,7 +69,12 @@ def train(model,
                 }
             )
 
-
+        # Clear monitors
+        if hasattr(model, 'output_monitor') and model.output_monitor is not None:
+            model.output_monitor.clear_recorded_data()
+        if hasattr(model, 'v_monitor') and model.v_monitor is not None:
+            model.v_monitor.clear_recorded_data()
+        
         print("starting validation...")
         # Validation after each epoch
         val_loss, val_iou = evaluate(model, val_loader, device, loss_fn, use_amp)

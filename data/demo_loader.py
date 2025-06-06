@@ -123,7 +123,7 @@ def add_noise(image, chance=0.1, flip=True):
 def build_demo_dataloader(batch_size=4, 
                           time_steps=10, 
                           input_size=(128, 128), 
-                          num_workers=2, 
+                          num_workers=0, 
                           num_samples=100,
                           moving=False,
                           noise=0.1,
@@ -148,7 +148,7 @@ def build_demo_dataloader(batch_size=4,
                                         heavy_noise=heavy_noise,
                                         heavy_noise_prob=heavy_noise_prob)
     
-    return DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    return DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, persistent_workers=False)
 
 
 

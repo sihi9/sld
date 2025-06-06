@@ -89,7 +89,7 @@ def visualize_weights(
     """
     if logger.vis_interval is None or logger.vis_interval <= 0:
         return
-    if step % logger.vis_interval != 0:
+    if (step + 1) % logger.vis_interval != 0:
         return
 
     print("🔍 Visualizing weights...")

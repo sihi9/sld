@@ -11,6 +11,7 @@ class LeakyIntegrator(nn.Module):
             v_threshold=1e9,    # Effectively disables spiking
             v_reset=0.0
         )
+        self.neuron.store_v_seq = True  # Store membrane potential sequence
 
     @property
     def v_seq(self):
