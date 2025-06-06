@@ -5,6 +5,7 @@ from tqdm import tqdm
 from engine.evaluator import evaluate
 from utils.monitoring import SpikeLogger
 from torch.utils.tensorboard import SummaryWriter
+from utils.visualizations import visualize_weights
 
 
 def train(model, 
@@ -58,7 +59,16 @@ def train(model,
 
         if logger is not None:
             from utils.monitoring import log_from_monitors
-            log_from_monitors(model, logger, epoch)
+            #log_from_monitors(model, logger, epoch)
+            visualize_weights(
+                model, 
+                logger, 
+                epoch,
+                layer_logging_prefs={
+                    "recurrent": "heatmap",      # recurrent layers → heatmap
+                }
+            )
+
 
         print("starting validation...")
         # Validation after each epoch

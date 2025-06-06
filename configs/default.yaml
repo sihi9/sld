@@ -18,7 +18,7 @@ model:
   encoder_channels: [4, 8]
   hidden_dim: null  # if null, defaults to flattened encoder output
   name: demo_model_membrane_sequence
-  recurrent: false
+  recurrent: true
   output_timesteps: 1
 
 train:
@@ -29,4 +29,4 @@ train:
   save_intermediate: false
 
 log:
-  vis_interval: 10
+  vis_interval: -1

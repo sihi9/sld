@@ -1,12 +1,9 @@
 import argparse
 import torch
-import os
-import yaml
 from torch import optim
 from torch.amp import GradScaler
 
 
-from data.demo_loader import build_demo_dataloader
 from data.loader_utils import DataModule
 from models.base_model import SpikingUNetRNN
 from engine.trainer import train
@@ -14,7 +11,6 @@ from engine.evaluator import run_final_evaluation_and_save
 
 
 from utils.visualizations import visualize_predictions
-from utils.monitoring import SpikeLogger
 from utils.config import load_config
 from utils.experiment import ExperimentManager
 
