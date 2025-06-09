@@ -10,6 +10,7 @@ from torchvision.utils import make_grid
 import torchvision.transforms.functional as TF
 
 from utils.monitoring import SpikeLogger
+from models.PLIFNode import PLIFNode 
 
 def visualize_predictions(model, dataloader, device, sample_idx=0, n=3, time_idx=0, logger=None, step=0):
     """
@@ -111,6 +112,8 @@ def visualize_weights(
                 log_linear_weights_histogram_named(name, module, logger, step)
             elif mode == "heatmap":
                 log_linear_weights_heatmap_named(name, module, logger, step)
+                
+    log_tau_per_plif_layer(model, logger, step)
     
 
 
@@ -170,3 +173,20 @@ def log_linear_weights_heatmap_named(name: str, module: nn.Module, logger: Spike
     image = PIL.Image.open(buf)
     logger.writer.add_image(f"Weights/Heatmap/{name}", np.array(image), step, dataformats='HWC')
     plt.close(fig)
+
+def log_tau_per_plif_layer(model: nn.Module, logger: SpikeLogger, step: int):
+    """
+    Logs a separate tau histogram for each PLIFNode layer.
+    """
+    print("📈 Logging PLIFNode taus...")
+
+    for name, module in model.named_modules():
+        if isinstance(module, PLIFNode):
+            # Compute tau values
+            tau_val = 1.0 / module.w.sigmoid().detach().cpu()
+
+            # If it's used on a batch or channel basis, expand to vector
+            if tau_val.numel() == 1:
+                logger.writer.add_scalar(f"NeuronTau/{name}", tau_val.item(), global_step=step)
+            else:
+                logger.writer.add_histogram(f"NeuronTau/Histogram/{name}", tau_val, global_step=step)

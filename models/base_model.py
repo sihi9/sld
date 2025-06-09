@@ -2,24 +2,33 @@ import torch
 import torch.nn as nn
 from spikingjelly.activation_based import layer, neuron, surrogate, functional, monitor
 from .LINode import LeakyIntegrator
+from .PLIFNode import PLIFNode
 
 
 class SpikingUNetRNN(nn.Module):
     def __init__(self, in_channels=1, out_channels=1,
-                 recurrent=True,
-                 input_size=(128, 128), 
-                 hidden_dim=4096, # currently unused
-                 encoder_channels=(2, 4),
-                 output_timesteps=1):
+                use_recurrent=True,
+                input_size=(128, 128), 
+                hidden_dim=4096,
+                encoder_channels=(2, 4),
+                output_timesteps=1,
+                use_plif_encoder=False,
+                use_plif_recurrent=False,
+                use_plif_decoder=False,
+                init_tau=2.0):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.recurrent = recurrent
+        self.use_recurrent = use_recurrent
         self.input_size = input_size  # (H, W)
         self.hidden_dim = hidden_dim
         self.encoder_channels = encoder_channels
         self.output_timesteps = output_timesteps
-      
+        self.use_plif_encoder = use_plif_encoder
+        self.use_plif_recurrent = use_plif_recurrent
+        self.use_plif_decoder = use_plif_decoder
+        self.init_tau = init_tau
+        
         # Output scaling and bias parameters
         self.output_scale = nn.Parameter(torch.tensor(5.0))
         self.output_bias = nn.Parameter(torch.tensor(0.5))
@@ -31,12 +40,12 @@ class SpikingUNetRNN(nn.Module):
         # --- Encoder ---
         c1, c2 = encoder_channels
         self.encoder = nn.Sequential(
-            layer.Conv2d(in_channels, c1, kernel_size=3, stride=2, padding=1, bias=False),  # H/2 x W/2
+            layer.Conv2d(in_channels, c1, kernel_size=3, stride=2, padding=1, bias=False),
             layer.BatchNorm2d(c1),
-            neuron.LIFNode(surrogate_function=surrogate.ATan()),
-            layer.Conv2d(c1, c2, kernel_size=3, stride=2, padding=1, bias=False),           # H/4 x W/4
+            self._make_neuron(use_plif=self.use_plif_encoder),
+            layer.Conv2d(c1, c2, kernel_size=3, stride=2, padding=1, bias=False),
             layer.BatchNorm2d(c2),
-            neuron.LIFNode(surrogate_function=surrogate.ATan())
+            self._make_neuron(use_plif=self.use_plif_encoder)
         )
 
         self.h_down = h // 4
@@ -45,26 +54,29 @@ class SpikingUNetRNN(nn.Module):
 
         # --- Recurrent bottleneck ---
         self.flatten = nn.Flatten(start_dim=2)
+        
         self.recurrent = layer.LinearRecurrentContainer(
-            neuron.IFNode(surrogate_function=surrogate.ATan(), v_threshold=0.5, detach_reset=False),
+            neuron.LIFNode(),
             in_features=self.flat_dim,
             out_features=self.flat_dim,
             bias=True
         )
+                
         self.feedforward_bottleneck = layer.Linear(self.flat_dim, self.flat_dim)
 
 
         # --- Decoder ---
         self.linear_decoder = layer.Linear(self.flat_dim, self.flat_dim, bias=False)
-        self.decoder_neuron = neuron.LIFNode(surrogate_function=surrogate.ATan())
+        self.decoder_neuron = self._make_neuron(use_plif=self.use_plif_decoder)
 
         self.decoder_conv = nn.Sequential(
-            layer.ConvTranspose2d(c2, c1, kernel_size=4, stride=2, padding=1, bias=False),  # H/2 x W/2
-            neuron.LIFNode(surrogate_function=surrogate.ATan()),
-            layer.ConvTranspose2d(c1, out_channels, kernel_size=4, stride=2, padding=1, bias=False),  # H x W
+            layer.ConvTranspose2d(c2, c1, kernel_size=4, stride=2, padding=1, bias=False),
+            self._make_neuron(use_plif=self.use_plif_decoder),
+            layer.ConvTranspose2d(c1, out_channels, kernel_size=4, stride=2, padding=1, bias=False),
             LeakyIntegrator()
         )
-
+        
+        functional.set_step_mode(self.recurrent, step_mode='m')
         functional.set_step_mode(self, step_mode='m')
         
         # size can be reduced. See: https://spikingjelly.readthedocs.io/zh-cn/latest/activation_based_en/monitor.html
@@ -93,7 +105,7 @@ class SpikingUNetRNN(nn.Module):
         x_flat = self.flatten(x)      
          
         # [T, B, flat_dim]
-        if self.recurrent:
+        if self.use_recurrent:
             x_latent = self.recurrent(x_flat)
         else:
             x_latent = self.feedforward_bottleneck(x_flat)  
@@ -130,4 +142,7 @@ class SpikingUNetRNN(nn.Module):
         else:  # e.g., -1 means use all time steps
             v_out = v_seq.mean(dim=0)
         return v_out
+
+    def _make_neuron(self, use_plif=False):
+        return PLIFNode(init_tau=self.init_tau, surrogate_function=surrogate.ATan()) if use_plif else neuron.LIFNode(surrogate_function=surrogate.ATan())
 

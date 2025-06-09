@@ -46,15 +46,18 @@ def log_spikes_from_monitor(model, logger: SpikeLogger, epoch: int):
     Only logs spikes for batch index 0 and separates by channel if present.
     """
     for layer_name in model.output_monitor.monitored_layers:
+        if layer_name == "recurrent.sub_module":
+            print("recurrent")
+            
         records = model.output_monitor[layer_name]
 
         if not records or len(records) == 0:
             continue
 
+        # select the first batch
         spikes = records[0].detach()  # [T, B, ...]
-        #print(f"Layer: {layer_name}, Records: {spikes.shape}")
 
-        # Pick only batch 0
+        # Pick first sample in batch
         spikes = spikes[:, 0]  # [T, ...]
         
         if spikes.dim() == 2:
@@ -99,11 +102,12 @@ def log_membrane_from_monitor(model, logger: SpikeLogger, epoch: int):
         if not records or len(records) == 0 or records[0] is None:
             continue
         
+        # Select batch 0
         v_seq = records[0].detach()
       
         #print(f"Layer: {layer_name}, v_seq shape: {v_seq.shape}")
 
-        # Select batch 0
+        # Pick first sample in batch
         v_seq = v_seq[:, 0]  # [T, ...]
 
         if v_seq.dim() == 2:

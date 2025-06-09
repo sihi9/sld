@@ -31,14 +31,19 @@ def main():
     val_loader = loaders['val']
     
     # Model
-    model = SpikingUNetRNN(
+    model = SpikingUNetRNN( 
         in_channels=cfg.model.in_channels,
         out_channels=cfg.model.out_channels,
-        recurrent=cfg.model.recurrent,
+        use_recurrent=cfg.model.recurrent,
         input_size=tuple(cfg.data.input_size),
         encoder_channels=cfg.model.encoder_channels,
         hidden_dim=cfg.model.hidden_dim,
         output_timesteps=cfg.model.output_timesteps,
+        
+        use_plif_encoder=cfg.model.use_plif_encoder,
+        use_plif_recurrent=cfg.model.use_plif_recurrent,
+        use_plif_decoder=cfg.model.use_plif_decoder,
+        init_tau=cfg.model.init_tau
     )
     
     

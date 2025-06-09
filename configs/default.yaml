@@ -4,7 +4,7 @@ description: >
 
 data:
   num_samples: 1000
-  batch_size: 4
+  batch_size: 8
   time_steps: 10
   input_size: [32, 32]
   moving: true
@@ -17,16 +17,20 @@ model:
   out_channels: 1
   encoder_channels: [4, 8]
   hidden_dim: null  # if null, defaults to flattened encoder output
-  name: demo_model_membrane_sequence
+  name: demo_membrane_sequence_plif
   recurrent: true
   output_timesteps: 1
+  use_plif_encoder: false
+  use_plif_recurrent: false
+  use_plif_decoder: false
+  init_tau: 2.0
 
 train:
-  epochs: 30
+  epochs: 50
   lr: 0.001
   amp: false
   device: cpu
   save_intermediate: false
 
 log:
-  vis_interval: 10
+  vis_interval: 1
