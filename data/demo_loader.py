@@ -2,6 +2,8 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import gridspec
+
 import os
 
 class DemoSegmentationDataset(Dataset):
@@ -38,16 +40,15 @@ class DemoSegmentationDataset(Dataset):
 
     def __getitem__(self, idx):
         if self.moving:
-            input_tensor, label_tensor = self.produce_moving_line(heavy_noise_prob=self.heavy_noise_prob,
-                                                                  heavy_noise=self.heavy_noise)
+            input_tensor, label_tensor = self.produce_moving_line()
         else:
-            input_tensor, label_tensor = self.produce_static_line(noise=self.noise)
+            input_tensor, label_tensor = self.produce_static_line()
         return input_tensor, label_tensor            
     
     
-    def produce_static_line(self, noise=0.1):
+    def produce_static_line(self):
         input_tensor = np.zeros((self.T, 1, self.H, self.W), dtype=np.float32)
-        label_tensor = np.zeros((self.T, 1, self.H, self.W), dtype=np.float32)
+        label_tensor = np.zeros((1, self.H, self.W), dtype=np.float32)
 
         # Randomly decide whether to draw in top or bottom half
         top_half = np.random.rand() < 0.5
@@ -57,22 +58,22 @@ class DemoSegmentationDataset(Dataset):
         # Randomly choose a column to draw the line
         col = np.random.randint(0, self.W)
 
-        for t in range(self.T):
-            x_start = max(0, col - self.line_width // 2)
-            x_end = min(self.W, col + self.line_width // 2 + 1)
+        x_start = max(0, col - self.line_width // 2)
+        x_end = min(self.W, col + self.line_width // 2 + 1)
 
-            # Draw vertical band in either top or bottom half
-            label_tensor[t, 0, row_start:row_end, x_start:x_end] = 1.0
+        for t in range(self.T):
             input_tensor[t, 0, row_start:row_end, x_start:x_end] = 1.0
             input_tensor[t, 0] = add_noise(input_tensor[t, 0], chance=self.noise, flip=True)
+        
+        label_tensor[0, row_start:row_end, x_start:x_end] = 1.0
 
         input_tensor = np.clip(input_tensor, 0.0, 1.0)
         return torch.from_numpy(input_tensor), torch.from_numpy(label_tensor)
     
     
-    def produce_moving_line(self, heavy_noise_prob=0.2, heavy_noise=0.4):
+    def produce_moving_line(self):
         input_tensor = np.zeros((self.T, 1, self.H, self.W), dtype=np.float32)
-        label_tensor = np.zeros((self.T, 1, self.H, self.W), dtype=np.float32)
+        label_tensor = np.zeros((1, self.H, self.W), dtype=np.float32)
 
         top_half = np.random.rand() < 0.5
         row_start = 0 if top_half else self.H // 2
@@ -82,22 +83,22 @@ class DemoSegmentationDataset(Dataset):
         end_col = start_col + self.W // 4
 
         for t in range(self.T):
-            col_pos = int(start_col + (t / self.T) * (end_col - start_col))
+            col_pos = int(start_col + (t / (self.T - 1)) * (end_col - start_col))
             x_start = max(0, col_pos - self.line_width // 2)
             x_end = min(self.W, col_pos + self.line_width // 2 + 1)
 
             input_tensor[t, 0, row_start:row_end, x_start:x_end] = 1.0
 
             # Decide whether to corrupt this frame
-            is_corrupt = np.random.rand() < heavy_noise_prob
+            is_corrupt = np.random.rand() < self.heavy_noise_prob
             
             # Noise level based on corruption
-            noise_chance = heavy_noise if is_corrupt else self.noise
+            noise_chance = self.heavy_noise if is_corrupt else self.noise
             input_tensor[t, 0] = add_noise(input_tensor[t, 0], chance=noise_chance, flip=True)
 
         final_x_start = max(0, end_col - self.line_width // 2)
         final_x_end = min(self.W, end_col + self.line_width // 2 + 1)
-        label_tensor[:, 0, row_start:row_end, final_x_start:final_x_end] = 1.0
+        label_tensor[0, row_start:row_end, final_x_start:final_x_end] = 1.0
 
         input_tensor = np.clip(input_tensor, 0.0, 1.0)
         return torch.from_numpy(input_tensor), torch.from_numpy(label_tensor)
@@ -156,28 +157,49 @@ def build_demo_dataloader(batch_size=4,
 # Visualization utilities
 # ---------------------------
 
-def plot_sample_sequence(inputs, labels, sample_idx=0, save_path=None, show=True):
+def plot_sample_sequence(inputs, labels, sample_idx=0, history=None, save_path=None, show=True):
     """
-    Plot a sequence of frames (input vs label) for one sample.
+    Plot a sequence of frames (input vs label overlay on last frame) horizontally.
 
     Args:
-        inputs: Tensor [B, T, 1, H, W]
-        labels: Tensor [B, T, 1, H, W]
+        inputs: Tensor or ndarray of shape [B, T, 1, H, W]
+        labels: Tensor or ndarray of shape [B, 1, H, W]
         sample_idx: index in batch to visualize
+        history: number of last frames to show (if None, show all)
         save_path: if given, saves the image
         show: whether to show the plot
     """
-    T = inputs.shape[1]
-    fig, axs = plt.subplots(T, 2, figsize=(6, 2 * T))
+    # squeeze out channel dim and select sample
+    x_seq = inputs[sample_idx, :, 0, :, :]  # now shape [T, H, W]
+    y = labels[sample_idx, 0]               # now shape [H, W]
+    mask = (y != 0)
 
-    for t in range(T):
-        axs[t, 0].imshow(inputs[sample_idx, t, 0], cmap='gray', vmin=0, vmax=1)
-        axs[t, 0].set_title(f"Input t={t}")
-        axs[t, 0].axis("off")
+    # decide which frames to show
+    T = x_seq.shape[0]
+    if history is None or history >= T:
+        seq = x_seq
+    else:
+        seq = x_seq[-history:]
+    n = seq.shape[0]
 
-        axs[t, 1].imshow(labels[sample_idx, t, 0], cmap='gray', vmin=0, vmax=1)
-        axs[t, 1].set_title(f"Label t={t}")
-        axs[t, 1].axis("off")
+    # figure size & grid spec: last column wider for overlay
+    fig_width = max(2 * n, 6)
+    fig_height = 3
+    width_ratios = [1] * (n - 1) + [2]
+    fig = plt.figure(figsize=(fig_width, fig_height))
+    gs = gridspec.GridSpec(1, n, width_ratios=width_ratios, wspace=0.05, hspace=0)
+
+    for i in range(n):
+        ax = fig.add_subplot(gs[0, i])
+        ax.imshow(seq[i], cmap='gray', vmin=0, vmax=1)
+        if i == n - 1:
+            # build a red, semi‐transparent overlay from the mask
+            H, W = y.shape
+            overlay = np.zeros((H, W, 4), dtype=float)
+            overlay[mask, 0] = 1.0  # full red
+            overlay[mask, 3] = 0.4  # 40% opacity
+            ax.imshow(overlay)
+        ax.axis('off')
 
     plt.tight_layout()
     if save_path:
@@ -187,7 +209,6 @@ def plot_sample_sequence(inputs, labels, sample_idx=0, save_path=None, show=True
         plt.show()
     else:
         plt.close()
-
 
 # Test visualization
 if __name__ == "__main__":

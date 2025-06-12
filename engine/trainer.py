@@ -37,13 +37,13 @@ def train(model,
         loop = tqdm(train_loader, desc=f"Epoch [{epoch+1}/{epochs}]", leave=True)
         for inputs, targets in loop:
             inputs = inputs.permute(1, 0, 2, 3, 4).to(device)   # [T, B, C, H, W]
-            targets = targets.permute(1, 0, 2, 3, 4).to(device)
+            targets = targets.to(device) # [B, C, H, W]
 
             optimizer.zero_grad()
 
             # todo: use amp
             outputs = model(inputs)            
-            loss = loss_fn(outputs, targets[-1])  # Use the last time step for loss calculation
+            loss = loss_fn(outputs, targets) 
             loss.backward()
             optimizer.step()
             

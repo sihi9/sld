@@ -77,13 +77,17 @@ class SpikingUNetRNN(nn.Module):
             LeakyIntegrator()
         )
         
-        functional.set_step_mode(self.recurrent, step_mode='m')
+        # size can be reduced. See: https://spikingjelly.readthedocs.io/zh-cn/latest/activation_based_en/monitor.html
+        # todo: for some reason, output_monitor only records the last time step of the recurrent container
+        self.output_monitor = monitor.OutputMonitor(self, 
+                                                    (neuron.LIFNode, neuron.ParametricLIFNode, layer.LinearRecurrentContainer))
+        self.v_monitor = monitor.AttributeMonitor('v_seq', 
+                                                  pre_forward=False, 
+                                                  net=self, 
+                                                  instance=(neuron.LIFNode, neuron.ParametricLIFNode))
+        
         functional.set_step_mode(self, step_mode='m')
         
-        # size can be reduced. See: https://spikingjelly.readthedocs.io/zh-cn/latest/activation_based_en/monitor.html
-        self.output_monitor = monitor.OutputMonitor(self, (neuron.LIFNode, neuron.ParametricLIFNode))
-        self.v_monitor = monitor.AttributeMonitor('v_seq', pre_forward=False, net=self, instance=(neuron.LIFNode, neuron.ParametricLIFNode))
-
 
         for m in self.modules():
             if isinstance(m, (neuron.LIFNode, neuron.ParametricLIFNode)):
@@ -116,7 +120,7 @@ class SpikingUNetRNN(nn.Module):
         x_reshaped = x_decoded.view(-1, x.shape[1], self.encoder_channels[1],
                                     self.h_down, self.w_down)  # [T, B, c2, H/4, W/4]
 
-        x_out = self.decoder_conv(x_reshaped)          # [T, B, out_channels, H, W]
+        _ = self.decoder_conv(x_reshaped)          # [T, B, out_channels, H, W]. Dont need output spikes
         
         # --- Use membrane potential instead of spike output ---
         v_seq = self.decoder_conv[-1].v_seq  # [T, B, out_channels, H, W]

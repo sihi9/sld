@@ -46,7 +46,6 @@ def main():
         init_tau=cfg.model.init_tau
     )
     
-    
     # Load pretrained weights if available
     if args.eval_checkpoint:
         print(f"Running evaluation on {args.eval_checkpoint}...")
@@ -57,7 +56,6 @@ def main():
         visualize_predictions(model, val_loader, device=cfg.train.device)
         return  # Exit after evaluation
     
-
     # Optimizer & AMP
     optimizer = optim.Adam(model.parameters(), lr=cfg.train.lr)
     scaler = GradScaler() if cfg.train.amp else None
