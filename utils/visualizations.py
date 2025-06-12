@@ -23,9 +23,9 @@ def visualize_predictions(model, dataloader, device, sample_idx=0, n=3, time_idx
     with torch.no_grad():
         for input_seq, label_seq in dataloader:
             input_seq = input_seq.permute(1, 0, 2, 3, 4).to(device)  # [T, B, C, H, W]
-            label_seq = label_seq.permute(1, 0, 2, 3, 4).to(device)
+            label_seq = label_seq.to(device)
 
-            output_seq = model(input_seq)  # [T, B, 1, H, W]
+            output_seq = model(input_seq)  # [B, 1, H, W]
 
             fig = show_sample_triplet(input_seq.cpu(), 
                                       output_seq.cpu(),
@@ -53,7 +53,7 @@ def show_sample_triplet(input_seq, output_seq, label_seq, n=3, figsize=(8, 8), c
     for i in range(n):
         input_img = input_seq[-1, i, 0].cpu().numpy()
         output_img = output_seq[i, 0].detach().cpu().numpy()
-        label_img = label_seq[-1, i, 0].cpu().numpy()
+        label_img = label_seq[i, 0].cpu().numpy()
 
         axs[i][0].imshow(input_img, cmap=cmap)
         axs[i][0].set_title(f"Input #{i}")

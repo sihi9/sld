@@ -71,11 +71,11 @@ def evaluate(model, dataloader, device, loss_fn=None, use_amp=False):
         for inputs, targets in tqdm(dataloader, desc="Evaluating"):
             # [B, T, C, H, W] -> [T, B, C, H, W]
             inputs = inputs.permute(1, 0, 2, 3, 4).to(device)
-            targets = targets.permute(1, 0, 2, 3, 4).to(device)
+            targets = targets.to(device)
 
             with autocast(device_type=device.split(':')[0]) if use_amp else torch.no_grad():
                 outputs = model(inputs)
-                loss = loss_fn(outputs, targets[-1])
+                loss = loss_fn(outputs, targets)
 
             iou = compute_batch_iou(outputs, targets)
 
@@ -96,15 +96,15 @@ def compute_batch_iou(preds, targets, threshold=0.5, eps=1e-6):
     Computes mean IoU for a batch of predictions and targets.
 
     Args:
-        preds: Tensor of shape [T, B, 1, H, W]
+        preds: Tensor of shape [B, 1, H, W]
         targets: Tensor of same shape
         threshold: Threshold to binarize outputs
     """
     preds_bin = (preds > threshold).float()
     targets_bin = (targets > 0.5).float()
 
-    intersection = (preds_bin * targets_bin).sum(dim=(2, 3, 4)).sum(0)
-    union = (preds_bin + targets_bin).clamp(0, 1).sum(dim=(2, 3, 4)).sum(0)
+    intersection = (preds_bin * targets_bin).sum(dim=(1,2,3))
+    union        = (preds_bin + targets_bin).clamp(0,1).sum(dim=(1,2,3))
 
     iou = (intersection + eps) / (union + eps)
     return iou.mean().item()
