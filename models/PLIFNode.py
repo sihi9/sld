@@ -31,13 +31,24 @@ class PLIFNode(neuron.BaseNode):
                          surrogate_function=surrogate_function,
                          detach_reset=detach_reset)
 
-        init_w = -math.log(init_tau - 1.0)
-        self.w = nn.Parameter(torch.tensor(init_w, dtype=torch.float))
+        self.init_tau = init_tau
+        self.init_w = -math.log(init_tau - 1.0)
+        
+        # Start with scalar; shape will be adjusted on first use
+        self.w = nn.Parameter(torch.tensor(self.init_w).view(1), requires_grad=True)
+        self._w_broadcasted = False
 
     def neuronal_charge(self, x: torch.Tensor):
         """
         Update membrane potential using PLIF dynamics.
         """
+        if not self._w_broadcasted:
+            expanded_shape = x.shape[1:]  # exclude batch/time dim
+            if expanded_shape != self.w.shape:
+                new_w = torch.full(expanded_shape, self.init_w, dtype=x.dtype, device=x.device)
+                self.w = nn.Parameter(new_w, requires_grad=True)
+            self._w_broadcasted = True
+        
         alpha = self.w.sigmoid()
         if self.v_reset is None:
             self.v = self.v + (x - self.v) * alpha

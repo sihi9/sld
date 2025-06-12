@@ -4,13 +4,12 @@ from typing import Dict, Literal, Optional
 import matplotlib.pyplot as plt
 import torch
 import numpy as np
-from spikingjelly.activation_based import functional, layer
+from spikingjelly.activation_based import functional, layer, neuron
 import torch.nn as nn
 from torchvision.utils import make_grid
 import torchvision.transforms.functional as TF
 
 from utils.monitoring import SpikeLogger
-from models.PLIFNode import PLIFNode 
 
 def visualize_predictions(model, dataloader, device, sample_idx=0, n=3, time_idx=0, logger=None, step=0):
     """
@@ -181,12 +180,7 @@ def log_tau_per_plif_layer(model: nn.Module, logger: SpikeLogger, step: int):
     print("📈 Logging PLIFNode taus...")
 
     for name, module in model.named_modules():
-        if isinstance(module, PLIFNode):
-            # Compute tau values
-            tau_val = 1.0 / module.w.sigmoid().detach().cpu()
+        if isinstance(module, neuron.ParametricLIFNode):
+            tau = 1.0 / module.w.sigmoid().detach()
+            logger.writer.add_histogram(f"NeuronTau/{name}", tau, global_step=step)
 
-            # If it's used on a batch or channel basis, expand to vector
-            if tau_val.numel() == 1:
-                logger.writer.add_scalar(f"NeuronTau/{name}", tau_val.item(), global_step=step)
-            else:
-                logger.writer.add_histogram(f"NeuronTau/Histogram/{name}", tau_val, global_step=step)

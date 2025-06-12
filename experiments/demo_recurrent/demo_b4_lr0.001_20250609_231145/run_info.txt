@@ -1,0 +1,5 @@
+Started: 2025-06-09 23:11:45
+Device: cpu
+AMP: False
+Description: sequence training without recurrent layer using only last timestep membrane potential as outout
+

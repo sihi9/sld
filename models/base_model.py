@@ -55,8 +55,9 @@ class SpikingUNetRNN(nn.Module):
         # --- Recurrent bottleneck ---
         self.flatten = nn.Flatten(start_dim=2)
         
+        
         self.recurrent = layer.LinearRecurrentContainer(
-            neuron.LIFNode(),
+            self._make_neuron(use_plif=self.use_plif_recurrent),
             in_features=self.flat_dim,
             out_features=self.flat_dim,
             bias=True
@@ -80,14 +81,14 @@ class SpikingUNetRNN(nn.Module):
         functional.set_step_mode(self, step_mode='m')
         
         # size can be reduced. See: https://spikingjelly.readthedocs.io/zh-cn/latest/activation_based_en/monitor.html
-        self.output_monitor = monitor.OutputMonitor(self, neuron.LIFNode)
-        self.v_monitor = monitor.AttributeMonitor('v_seq', pre_forward=False, net=self, instance=neuron.LIFNode)
+        self.output_monitor = monitor.OutputMonitor(self, (neuron.LIFNode, neuron.ParametricLIFNode))
+        self.v_monitor = monitor.AttributeMonitor('v_seq', pre_forward=False, net=self, instance=(neuron.LIFNode, neuron.ParametricLIFNode))
 
-        # Enable voltage recording
+
         for m in self.modules():
-            if isinstance(m, neuron.LIFNode):
+            if isinstance(m, (neuron.LIFNode, neuron.ParametricLIFNode)):
                 m.store_v_seq = True
-
+                
         with torch.no_grad():
             self.encoder[0].weight += 0.5 
             self.encoder[3].weight += 0.5 
@@ -144,5 +145,8 @@ class SpikingUNetRNN(nn.Module):
         return v_out
 
     def _make_neuron(self, use_plif=False):
-        return PLIFNode(init_tau=self.init_tau, surrogate_function=surrogate.ATan()) if use_plif else neuron.LIFNode(surrogate_function=surrogate.ATan())
+        if use_plif:
+            return neuron.ParametricLIFNode(init_tau=self.init_tau, surrogate_function=surrogate.ATan()) 
+        else:
+            return neuron.LIFNode(surrogate_function=surrogate.ATan())
 
