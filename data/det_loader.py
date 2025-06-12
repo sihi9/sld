@@ -1,0 +1,206 @@
+import os
+import h5py
+import numpy as np
+import cv2
+import torch
+from torch.utils.data import Dataset, DataLoader
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+
+def _downscale_frame(img: np.ndarray, factor: int) -> np.ndarray:
+    """Downscale binary frame (0/255) with area then threshold to preserve binary."""
+    if factor == 1:
+        return img
+    H, W = img.shape
+    H2, W2 = H // factor, W // factor
+    img_ds = cv2.resize(img, (W2, H2), interpolation=cv2.INTER_AREA)
+    # re-binarize (removes isolated noise)
+    _, img_bin = cv2.threshold(img_ds, 127, 255, cv2.THRESH_BINARY)
+    return img_bin
+
+
+def _downscale_label(img: np.ndarray, factor: int) -> np.ndarray:
+    """Downscale integer-labelled mask with nearest-neighbor interpolation."""
+    if factor == 1:
+        return img
+    H, W = img.shape
+    H2, W2 = H // factor, W // factor
+    return cv2.resize(img, (W2, H2), interpolation=cv2.INTER_NEAREST)
+
+
+class HDF5Dataset(Dataset):
+    """
+    PyTorch Dataset for HDF5 sequence data.
+
+    Args:
+        h5_path: Path to the HDF5 file containing 'X', 'Y', and optionally 'snapshot_idx'.
+        input_downscale: Downscale factor for input frames (integer >=1).
+        label_downscale: Downscale factor for label masks (integer >=1).
+        filter_fn: Optional function (X: np.ndarray, Y: np.ndarray) -> bool
+                   to include/exclude samples.
+    """
+    def __init__(self,
+                 h5_path: str,
+                 input_downscale: int = 1,
+                 label_downscale: int = 1,
+                 filter_fn=None):
+        path_prefix = './data/DET/'  # Assuming data files are in a 'data' directory
+        self.h5_path = path_prefix + h5_path
+        self.input_downscale = input_downscale
+        self.label_downscale = label_downscale
+        self.filter_fn = filter_fn
+
+        # Open in read-only mode
+        self._h5 = h5py.File(self.h5_path, 'r')
+        self._X = self._h5['X']
+        self._Y = self._h5['Y']
+        self._snapshot_idx = self._h5['snapshot_idx']
+        # Build index list
+        self.indices = list(range(self._X.shape[0]))
+
+        # Apply filter_fn if provided
+        if self.filter_fn is not None:
+            valid = []
+            for idx in self.indices:
+                x_np = self._X[idx]  # shape (T,1,H,W)
+                y_np = self._Y[idx]
+                # numpy array
+                if self.filter_fn(x_np, y_np):
+                    valid.append(idx)
+            self.indices = valid
+
+    def __len__(self):
+        return len(self.indices)
+
+    def __getitem__(self, idx):
+        real_idx = self.indices[idx]
+        x_np = self._X[real_idx]  # (T,1,H,W)
+        y_np = self._Y[real_idx]  # (1,H,W)
+        # Downscale each frame and label
+        # Convert to uint8 numpy
+        T, C, H, W = x_np.shape
+        # Process frames
+        frames = []
+        for t in range(T):
+            img = x_np[t, 0, :, :].astype(np.uint8)
+            img_ds = _downscale_frame(img, self.input_downscale)
+            frames.append(img_ds)
+        x_ds = np.stack(frames, axis=0)  # (T,H2,W2)
+        x_ds = x_ds[:, np.newaxis, :, :]  # (T,1,H2,W2)
+
+        # Process label
+        lab = y_np[0].astype(np.uint8)
+        lab_ds = _downscale_label(lab, self.label_downscale)
+        lab_ds = lab_ds[np.newaxis, :, :]  # (1,H2,W2)
+
+        # Convert to torch.Tensor
+        x_tensor = torch.from_numpy(x_ds).float() / 255.0
+        y_tensor = torch.from_numpy(lab_ds).long()
+        return x_tensor, y_tensor
+
+    def close(self):
+        """Close the underlying HDF5 file."""
+        self._h5.close()
+
+    def __del__(self):
+        try:
+            self.close()
+        except:
+            pass
+
+
+
+def build_det_dataloader(batch_size=4, 
+                         num_workers=0, 
+                         input_downscale=1,
+                         label_downscale=1,
+                         ):
+    """
+    Build a DataLoader for the demo segmentation dataset.
+    Args:
+        batch_size: Number of samples per batch.
+        time_steps: Number of time steps in each sample.
+        input_size: Tuple (H, W)
+        num_workers: Number of workers for data loading.
+        num_samples: Total number of samples in the dataset.
+        moving: If True, produces moving lines; otherwise static lines.
+    """
+    dataset = HDF5Dataset(
+        h5_path='20190217_1156_x4.h5',  # todo: load all files in the DET directory
+        input_downscale=1,
+        label_downscale=1,
+    )
+    return DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+
+
+def plot_sample_sequence(inputs, labels, history=10, save_path=None, show=True):
+    """
+    Visualize a sequence of frames with label in last frame
+    Args:
+        inputs: [B, T, C, H, W] 
+        labes: [B, 1, H, W]
+        history: Number of frames to show from the end of the sequence
+        save_path: Path to save the figure, if None, will not save
+        show: If True, will show the figure, otherwise will just close it
+    """
+
+    # Squeeze channel dimension
+     
+    x_seq = inputs[0, :, 0, :, :]   
+    y = labels[0, 0, :, :]
+    # Create boolean mask for label overlay
+    mask = (y != 0)
+
+    T = x_seq.shape[0]
+
+    
+    if T > history:
+        seq = x_seq[-history:]
+    else:
+        seq = x_seq
+    n = seq.shape[0]
+
+    # Dynamically adjust figure size
+    # Each frame column approx 2 inches, but minimum width 6 inches
+    fig_width = max(n * 2, 6)
+    fig_height = 3
+    # Set up figure: single row with n columns, last column wider
+    width_ratios = [1] * (n - 1) + [2]
+    fig = plt.figure(figsize=(fig_width, fig_height))
+    gs = gridspec.GridSpec(
+        1, n,
+        width_ratios=width_ratios,
+        wspace=0.05, hspace=0)
+
+    # Plot frames and overlay mask on last frame
+    for i in range(n):
+        ax = fig.add_subplot(gs[0, i])
+        ax.imshow(seq[i], cmap='gray', vmin=0, vmax=1)
+        if i == n - 1:
+            # Create RGBA overlay: transparent background, red where mask True
+            H, W = y.shape
+            overlay = np.zeros((H, W, 4), dtype=float)
+            overlay[mask, 0] = 1.0  # red channel
+            overlay[mask, 3] = 0.4  # alpha channel
+            ax.imshow(overlay)
+        ax.axis('off')
+
+    # Save figure
+    if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path, dpi=150)
+    if show:
+        plt.show()
+    else:
+        plt.close()
+        
+# Example usage guard
+if __name__ == '__main__':
+    # Quick test
+    loader = build_det_dataloader()
+    
+    for x, y in loader:
+        print("Input:", x.shape)  
+        print("Label:", y.shape)
+        plot_sample_sequence(x, y)
+        break
