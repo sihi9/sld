@@ -7,8 +7,8 @@ from .PLIFNode import PLIFNode
 
 class SpikingUNetRNN(nn.Module):
     def __init__(self, in_channels=1, out_channels=1,
-                use_recurrent=True,
                 input_size=(128, 128), 
+                use_recurrent=True,
                 hidden_dim=4096,
                 encoder_channels=(2, 4),
                 output_timesteps=1,
@@ -19,9 +19,9 @@ class SpikingUNetRNN(nn.Module):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.use_recurrent = use_recurrent
         self.input_size = input_size  # (H, W)
-        self.hidden_dim = hidden_dim
+        self.use_recurrent = use_recurrent
+        self.hidden_dim = hidden_dim    # todo: use or delete
         self.encoder_channels = encoder_channels
         self.output_timesteps = output_timesteps
         self.use_plif_encoder = use_plif_encoder
@@ -153,4 +153,3 @@ class SpikingUNetRNN(nn.Module):
             return neuron.ParametricLIFNode(init_tau=self.init_tau, surrogate_function=surrogate.ATan()) 
         else:
             return neuron.LIFNode(surrogate_function=surrogate.ATan())
-
