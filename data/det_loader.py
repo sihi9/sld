@@ -80,6 +80,7 @@ class HDF5Dataset(Dataset):
         # Convert to uint8 numpy
         T, C, H, W = x_np.shape
         # Process frames
+        
         frames = []
         for t in range(T):
             img = x_np[t, 0, :, :].astype(np.uint8)
@@ -93,10 +94,34 @@ class HDF5Dataset(Dataset):
         lab_ds = _downscale_label(lab, self.label_downscale)
         lab_ds = lab_ds[np.newaxis, :, :]  # (1,H2,W2)
 
+        # make sure the image can be fed into a U-Net model with 3 2x2 downscales
+        T, C, H2, W2 = x_ds.shape
+        rem_h = H2 % 8
+        rem_w = W2 % 8
+        
+        if rem_h != 0 or rem_w != 0:
+            # Crop the top because its less relevant
+            crop_top = rem_h
+            
+            # split width cropping
+            crop_left  = rem_w // 2
+            crop_right = rem_w - crop_left
+
+            # apply to both data and label
+            x_ds = x_ds[:, :,
+                        crop_top : H2,
+                        crop_left: W2 - crop_right]
+            lab_ds = lab_ds[:,
+                            crop_top : H2,
+                            crop_left: W2 - crop_right]
+            
+        
         # Convert to torch.Tensor
         x_tensor = torch.from_numpy(x_ds).float() / 255.0
         y_tensor = torch.from_numpy(lab_ds).long()
-        return x_tensor, y_tensor
+        y_binary = (y_tensor != 0).float()  # Convert to binary mask
+        
+        return x_tensor, y_binary
 
     def close(self):
         """Close the underlying HDF5 file."""
@@ -127,8 +152,8 @@ def build_det_dataloader(batch_size=4,
     """
     dataset = HDF5Dataset(
         h5_path='20190217_1156_x4.h5',  # todo: load all files in the DET directory
-        input_downscale=1,
-        label_downscale=1,
+        input_downscale=input_downscale,
+        label_downscale=label_downscale,
     )
     return DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 

@@ -30,12 +30,17 @@ def main():
     train_loader = loaders['train']
     val_loader = loaders['val']
     
+    # grab one batch to inspect its spatial size
+    x_sample, y_sample = next(iter(train_loader))
+    B, T, C_in, H_in, W_in = x_sample.shape
+    _, C_out, H_out, W_out = y_sample.shape
+
     # Model
     model = SpikingUNetRNN( 
-        in_channels=cfg.model.in_channels,
-        out_channels=cfg.model.out_channels,
+        in_channels=C_in,
+        out_channels=C_out,        
+        input_size=(H_in, W_in),
         use_recurrent=cfg.model.recurrent,
-        input_size=tuple(cfg.data.input_size),
         encoder_channels=cfg.model.encoder_channels,
         hidden_dim=cfg.model.hidden_dim,
         output_timesteps=cfg.model.output_timesteps,
@@ -45,6 +50,9 @@ def main():
         use_plif_decoder=cfg.model.use_plif_decoder,
         init_tau=cfg.model.init_tau
     )
+    
+    exp.log_model_summary(model, input_shape=(T, B, C_in, H_in, W_in))
+    exp.log_neuron_counts(model, input_shape=(T, B, C_in, H_in, W_in))
     
     # Load pretrained weights if available
     if args.eval_checkpoint:

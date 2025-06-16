@@ -1,7 +1,13 @@
 import torch
+import os
+from torch import prod
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 from spikingjelly import visualizing
+
+from spikingjelly.activation_based import functional
+
+
 
 
 class SpikeLogger:
@@ -139,3 +145,40 @@ def log_membrane_from_monitor(model, logger: SpikeLogger, epoch: int):
 
         else:
             print(f"⚠️ Skipped {layer_name}: unexpected shape {v_seq.shape}")
+
+
+
+
+
+def count_neurons(model, input_shape):
+    """
+    Runs one forward pass of `model` on a dummy input of shape `input_shape`
+    (T, B, C, H, W) with B=1, then inspects model.v_monitor to get v_seq shapes
+    for each spiking‐neuron layer. Returns:
+      - per_layer: dict[layer_name] = num_neurons
+      - total: sum of all num_neurons
+    """
+    # 1) clear any existing state
+    functional.reset_net(model)
+    # 2) make a dummy batch (all zeros) on same device
+    T, B, C, H, W = input_shape
+    device = next(model.parameters()).device
+    dummy = torch.zeros(T, B, C, H, W, device=device)
+    # 3) forward (we only need v_seq monitors; outputs can be discarded)
+    _ = model(dummy, return_seq=True)
+    # 4) iterate over each monitored module
+    per_layer = {}
+    total = 0
+    for layer_name in model.v_monitor.monitored_layers:
+        # model.v_monitor[layer_name] is a list of v_seq tensors, one per forward
+        records = model.v_monitor[layer_name]
+        if not records or records[0] is None:
+            continue
+        v_seq = records[0]    # shape [T, B, …]
+        # count a single time‐slice and batch‐slice
+        shape = v_seq.shape[2:]
+        n_neurons = int(prod(torch.tensor(shape)))
+        per_layer[layer_name] = n_neurons
+        total += n_neurons
+    return per_layer, total
+
