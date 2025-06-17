@@ -18,10 +18,13 @@ from utils.experiment import ExperimentManager
 
 def main():
     args = parse_args()
-    cfg = load_config()
+    cfg = load_config(model=args.model, data=args.data, overrides=args, resume_path=args.resume_from)
+
     device = get_device()
     print(f"Running on {device} | AMP: {'Enabled' if cfg.train.amp else 'Disabled'}")
-        
+    print(f"Using model config: {cfg.model.name}")
+    print(f"Using data loader: {cfg.data.loader}")
+    
     exp = ExperimentManager(cfg, args)
     logger = exp.get_logger()
     
@@ -37,31 +40,35 @@ def main():
     _, C_out, H_out, W_out = y_sample.shape
 
     # # Model
-    # model = SpikingRNN( 
-    #     in_channels=C_in,
-    #     out_channels=C_out,        
-    #     input_size=(H_in, W_in),
-    #     use_recurrent=cfg.model.recurrent,
-    #     encoder_channels=cfg.model.encoder_channels,
-    #     hidden_dim=cfg.model.hidden_dim,
-    #     output_timesteps=cfg.model.output_timesteps,
-        
-    #     use_plif_encoder=cfg.model.use_plif_encoder,
-    #     use_plif_recurrent=cfg.model.use_plif_recurrent,
-    #     use_plif_decoder=cfg.model.use_plif_decoder,
-    #     init_tau=cfg.model.init_tau
-    # )
-    model = SpikingUNetRNN(
-        in_channels=C_in,
-        out_channels=C_out,
-        input_size=(H_in, W_in),
-        hidden_dim=cfg.model.hidden_dim,
-        use_plif_encoder=cfg.model.use_plif_encoder,
-        use_plif_recurrent=cfg.model.use_plif_recurrent,
-        use_plif_decoder=cfg.model.use_plif_decoder,
-        init_tau=cfg.model.init_tau,
-        visualize=cfg.log.vis_interval > 0
-    )
+    if cfg.model.name == "base":
+        model = SpikingRNN( 
+            in_channels=C_in,
+            out_channels=C_out,        
+            input_size=(H_in, W_in),
+            use_recurrent=cfg.model.recurrent,
+            encoder_channels=cfg.model.encoder_channels,
+            hidden_dim=cfg.model.hidden_dim,
+            output_timesteps=cfg.model.output_timesteps,
+            
+            use_plif_encoder=cfg.model.use_plif_encoder,
+            use_plif_recurrent=cfg.model.use_plif_recurrent,
+            use_plif_decoder=cfg.model.use_plif_decoder,
+            init_tau=cfg.model.init_tau
+        )
+    elif cfg.model.name == "unet":
+        model = SpikingUNetRNN(
+            in_channels=C_in,
+            out_channels=C_out,
+            input_size=(H_in, W_in),
+            hidden_dim=cfg.model.hidden_dim,
+            use_plif_encoder=cfg.model.use_plif_encoder,
+            use_plif_recurrent=cfg.model.use_plif_recurrent,
+            use_plif_decoder=cfg.model.use_plif_decoder,
+            init_tau=cfg.model.init_tau,
+            visualize=cfg.log.vis_interval > 0
+        )
+    else:
+        raise ValueError(f"Unknown model type: {cfg.model.name}")
     
     exp.log_model_summary(model, input_shape=(T, B, C_in, H_in, W_in))
     if cfg.log.vis_interval > 0:    # todo: find a way that doesnt need v_monitor
@@ -117,6 +124,18 @@ def parse_args():
         default=None,
         help='Path to checkpoint to evaluate. Use without a value to default to checkpoints/checkpoint_final.pth'
     )
+    
+     # Named config blocks
+    parser.add_argument('--model', choices=["base", "unet"], help='Model profile name')
+    parser.add_argument('--data', choices=["demo", "det"], help='Data profile name')
+
+    # Specific overrides
+    parser.add_argument('--lr', type=float, dest='train_lr', help='Override training learning rate')
+    parser.add_argument('--hidden_dim', type=int, dest='model_hidden_dim', help='Override model hidden dim')
+
+    # Rerun mode
+    parser.add_argument('--resume-from', type=str, help='Path to previous experiment folder to rerun')
+    
     return parser.parse_args()
 
 

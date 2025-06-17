@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 import yaml
+import shutil
 from argparse import Namespace
 from typing import Any, Dict, Optional, Tuple, Union
 
@@ -25,11 +26,22 @@ def create_experiment_dir(cfg: Any, args: Namespace, base_dir: str = "experiment
     os.makedirs(os.path.join(exp_dir, "logs"), exist_ok=True)
 
     # Save configuration
+    # Save merged flat config
     config_path = os.path.join(exp_dir, "config.yaml")
     with open(config_path, 'w') as f:
         cfg_dict_raw = cfg.to_dict() if hasattr(cfg, "to_dict") else cfg
         cfg_dict = namespace_to_dict(cfg_dict_raw)
         yaml.dump(cfg_dict, f, default_flow_style=False)
+
+    # Save original profile configs for reproducibility
+    shutil.copy("configs/default.yaml", os.path.join(exp_dir, "default.yaml"))
+
+    model_key = args.model or cfg.model.name
+    data_key = args.data or cfg.data.loader
+
+    shutil.copy(f"configs/model/{model_key}.yaml", os.path.join(exp_dir, f"model_{model_key}.yaml"))
+    shutil.copy(f"configs/data/{data_key}.yaml", os.path.join(exp_dir, f"data_{data_key}.yaml"))
+
 
     # Save CLI arguments
     with open(os.path.join(exp_dir, "args.txt"), "w") as f:
