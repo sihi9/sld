@@ -5,7 +5,7 @@ from .LINode import LeakyIntegrator
 from .PLIFNode import PLIFNode
 
 
-class SpikingUNetRNN(nn.Module):
+class SpikingRNN(nn.Module):
     def __init__(self, in_channels=1, out_channels=1,
                 input_size=(128, 128), 
                 use_recurrent=True,

@@ -4,14 +4,14 @@ description: >
 
 data:
   # Common settings
-  loader: "det"           # "demo" or "det"
+  loader: "demo"           # "demo" or "det"
   batch_size: 4
   num_workers: 4          
 
   # → for demo loader only:
   num_samples: 100
   time_steps: 10
-  input_size: [100,100]
+  input_size: [32,32]
   moving: true
   noise: 0.1
   heavy_noise: 0.4
@@ -23,7 +23,7 @@ data:
 
 model:
   encoder_channels: [4, 8]
-  hidden_dim: null  # if null, defaults to flattened encoder output
+  hidden_dim: 512  # if null, defaults to flattened encoder output
   name: det_recurrent_full_plif
   recurrent: true
   output_timesteps: 1
@@ -40,4 +40,4 @@ train:
   save_intermediate: false
 
 log:
-  vis_interval: 1
+  vis_interval: -1
