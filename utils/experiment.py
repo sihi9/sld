@@ -113,7 +113,7 @@ class ExperimentManager:
     def log_model_summary(self, model, input_shape):
         summary_str = str(summary(model, input_size=input_shape, verbose=0))
         # file
-        with open(os.path.join(self.exp_dir, "model_summary.txt"), "w") as f:
+        with open(os.path.join(self.exp_dir, "model_summary.txt"), "w", encoding="utf-8") as f:
             f.write(summary_str)
         # tensorboard
         self.logger.log_text("experiment/model_summary", f"```\n{summary_str}\n```", step=0)
