@@ -1,0 +1,5 @@
+Started: 2025-06-17 23:55:06
+Device: auto
+AMP: False
+Description: Base model moving without plif
+
