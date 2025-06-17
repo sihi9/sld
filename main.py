@@ -5,7 +5,8 @@ from torch.amp import GradScaler
 
 
 from data.loader_utils import DataModule
-from models.base_model import SpikingUNetRNN
+from models.base_model import SpikingRNN
+from models.unet_model import SpikingUNetRNN
 from engine.trainer import train
 from engine.evaluator import run_final_evaluation_and_save
 
@@ -35,24 +36,36 @@ def main():
     B, T, C_in, H_in, W_in = x_sample.shape
     _, C_out, H_out, W_out = y_sample.shape
 
-    # Model
-    model = SpikingUNetRNN( 
-        in_channels=C_in,
-        out_channels=C_out,        
-        input_size=(H_in, W_in),
-        use_recurrent=cfg.model.recurrent,
-        encoder_channels=cfg.model.encoder_channels,
-        hidden_dim=cfg.model.hidden_dim,
-        output_timesteps=cfg.model.output_timesteps,
+    # # Model
+    # model = SpikingRNN( 
+    #     in_channels=C_in,
+    #     out_channels=C_out,        
+    #     input_size=(H_in, W_in),
+    #     use_recurrent=cfg.model.recurrent,
+    #     encoder_channels=cfg.model.encoder_channels,
+    #     hidden_dim=cfg.model.hidden_dim,
+    #     output_timesteps=cfg.model.output_timesteps,
         
+    #     use_plif_encoder=cfg.model.use_plif_encoder,
+    #     use_plif_recurrent=cfg.model.use_plif_recurrent,
+    #     use_plif_decoder=cfg.model.use_plif_decoder,
+    #     init_tau=cfg.model.init_tau
+    # )
+    model = SpikingUNetRNN(
+        in_channels=C_in,
+        out_channels=C_out,
+        input_size=(H_in, W_in),
+        hidden_dim=cfg.model.hidden_dim,
         use_plif_encoder=cfg.model.use_plif_encoder,
         use_plif_recurrent=cfg.model.use_plif_recurrent,
         use_plif_decoder=cfg.model.use_plif_decoder,
-        init_tau=cfg.model.init_tau
+        init_tau=cfg.model.init_tau,
+        visualize=cfg.log.vis_interval > 0
     )
     
     exp.log_model_summary(model, input_shape=(T, B, C_in, H_in, W_in))
-    exp.log_neuron_counts(model, input_shape=(T, B, C_in, H_in, W_in))
+    if cfg.log.vis_interval > 0:    # todo: find a way that doesnt need v_monitor
+        exp.log_neuron_counts(model, input_shape=(T, B, C_in, H_in, W_in))
     
     # Load pretrained weights if available
     if args.eval_checkpoint:
