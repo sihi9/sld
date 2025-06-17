@@ -1,0 +1,5 @@
+Started: 2025-06-17 19:48:37
+Device: auto
+AMP: False
+Description: Spiking SNN training smaller unet
+
