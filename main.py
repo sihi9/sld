@@ -60,6 +60,7 @@ def main():
             in_channels=C_in,
             out_channels=C_out,
             input_size=(H_in, W_in),
+            features=cfg.model.features,
             hidden_dim=cfg.model.hidden_dim,
             use_plif_encoder=cfg.model.use_plif_encoder,
             use_plif_recurrent=cfg.model.use_plif_recurrent,
