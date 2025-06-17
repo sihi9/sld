@@ -1,0 +1,9 @@
+name: base
+encoder_channels: [4, 8]
+hidden_dim: 512
+recurrent: true
+output_timesteps: 1
+use_plif_encoder: false
+use_plif_recurrent: false
+use_plif_decoder: false
+init_tau: 2.0
