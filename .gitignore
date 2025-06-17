@@ -34,8 +34,8 @@ build/
 *.ckpt
 
 # TensorBoard log files
-logs/
-events.out.tfevents.*
+#logs/
+#events.out.tfevents.*
 
 # checkpoints
 *.pth
