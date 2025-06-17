@@ -11,7 +11,9 @@ def run_final_evaluation_and_save(
     val_loader,
     optimizer,
     scaler,
-    cfg,
+    device,
+    amp,
+    epochs,
     checkpoint_dir: str
 ) -> None:
     """
@@ -22,18 +24,20 @@ def run_final_evaluation_and_save(
         val_loader: Validation dataloader.
         optimizer: Optimizer instance.
         scaler: AMP GradScaler, or None.
-        cfg: Configuration object.
+        device: Torch device ('cuda', 'cpu', etc.).
+        amp: Whether to use automatic mixed precision.
+        epochs: Number of epochs trained.
         checkpoint_dir: Directory where checkpoint will be saved.
     """
     print("Running final evaluation on validation set...")
-    final_loss, final_iou = evaluate(model, val_loader, cfg.train.device, use_amp=cfg.train.amp)
+    final_loss, final_iou = evaluate(model, val_loader, device, use_amp=amp)
     print(f"Final Loss: {final_loss:.4f}, Final IoU: {final_iou:.4f}")
 
     checkpoint = {
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
         'scaler_state_dict': scaler.state_dict() if scaler else None,
-        'epoch': cfg.train.epochs,
+        'epochs': epochs,
         'final_loss': final_loss,
         'final_iou': final_iou
     }
