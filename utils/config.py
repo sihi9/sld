@@ -2,6 +2,7 @@ import yaml
 from types import SimpleNamespace
 import argparse
 from typing import Any, Dict, Union
+import torch
 
 def load_config(path="configs/default.yaml"):
     with open(path, "r") as f:
@@ -63,3 +64,8 @@ def serialize_config_for_logging(
     yaml_str = yaml.dump(combined_config, sort_keys=False, default_flow_style=False)
 
     return f"```yaml\n{yaml_str}\n```" if markdown else yaml_str
+
+def get_device(config_device="auto"):
+    if config_device == "auto":
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    return torch.device(config_device)

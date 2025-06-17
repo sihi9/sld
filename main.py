@@ -12,15 +12,15 @@ from engine.evaluator import run_final_evaluation_and_save
 
 
 from utils.visualizations import visualize_predictions
-from utils.config import load_config
+from utils.config import load_config, get_device
 from utils.experiment import ExperimentManager
 
 
 def main():
     args = parse_args()
     cfg = load_config()
-
-    print(f"Running on {cfg.train.device} | AMP: {'Enabled' if cfg.train.amp else 'Disabled'}")
+    device = get_device()
+    print(f"Running on {device} | AMP: {'Enabled' if cfg.train.amp else 'Disabled'}")
         
     exp = ExperimentManager(cfg, args)
     logger = exp.get_logger()
@@ -70,8 +70,8 @@ def main():
     # Load pretrained weights if available
     if args.eval_checkpoint:
         print(f"Running evaluation on {args.eval_checkpoint}...")
-        model.load_state_dict(torch.load(args.eval_checkpoint, map_location=cfg.train.device, weights_only=True))
-        model.to(cfg.train.device)
+        model.load_state_dict(torch.load(args.eval_checkpoint, map_location=device, weights_only=True))
+        model.to(device)
         model.eval()
 
         visualize_predictions(model, val_loader, device=cfg.train.device)
@@ -84,7 +84,7 @@ def main():
     # Train
     train(model, train_loader, val_loader,
           optimizer, 
-          device=cfg.train.device,
+          device=device,
           scaler=scaler, 
           epochs=cfg.train.epochs,
           use_amp=cfg.train.amp, 
@@ -98,11 +98,13 @@ def main():
         val_loader=val_loader,
         optimizer=optimizer,
         scaler=scaler,
-        cfg=cfg,
+        device=device,
+        amp=cfg.train.amp,
+        epochs=cfg.train.epochs,
         checkpoint_dir=logger.checkpoint_dir
     )
         
-    visualize_predictions(model, val_loader, device=cfg.train.device, logger=logger, step=cfg.train.epochs)
+    visualize_predictions(model, val_loader, device=device, logger=logger, step=cfg.train.epochs)
 
     logger.close()
 
