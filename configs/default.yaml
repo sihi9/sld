@@ -6,7 +6,7 @@ defaults:
   data: det   # det or demo
 
 train:
-  epochs: 20
+  epochs: 50
   lr: 0.001
   amp: false
   device: auto
