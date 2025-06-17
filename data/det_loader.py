@@ -3,7 +3,7 @@ import h5py
 import numpy as np
 import cv2
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, random_split
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
@@ -135,10 +135,12 @@ class HDF5Dataset(Dataset):
 
 
 
-def build_det_dataloader(batch_size=4, 
+def build_det_dataloaders(batch_size=4, 
                          num_workers=0, 
                          input_downscale=1,
                          label_downscale=1,
+                         train_split=0.8,
+                         seed=42
                          ):
     """
     Build a DataLoader for the demo segmentation dataset.
@@ -155,7 +157,16 @@ def build_det_dataloader(batch_size=4,
         input_downscale=input_downscale,
         label_downscale=label_downscale,
     )
-    return DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    total_size = len(dataset)
+    train_size = int(train_split * total_size)
+    val_size = total_size - train_size
+    generator = torch.Generator().manual_seed(seed)
+    train_dataset, val_dataset = random_split(dataset, [train_size, val_size], generator=generator)
+
+    return {
+        "train": DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers),
+        "val": DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers),
+    }
 
 
 def plot_sample_sequence(inputs, labels, history=10, save_path=None, show=True):
@@ -222,7 +233,7 @@ def plot_sample_sequence(inputs, labels, history=10, save_path=None, show=True):
 # Example usage guard
 if __name__ == '__main__':
     # Quick test
-    loader = build_det_dataloader()
+    loader = build_det_dataloaders()["train"]
     
     for x, y in loader:
         print("Input:", x.shape)  

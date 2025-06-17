@@ -1,5 +1,5 @@
 from data.demo_loader import build_demo_dataloader
-from data.det_loader  import build_det_dataloader
+from data.det_loader  import build_det_dataloaders
 
 class DataModule:
     def __init__(self, cfg):
@@ -38,20 +38,13 @@ class DataModule:
             # use the real DET loader
             # here we simply instantiate train and val on the full dataset
             # (if you want a split, you can wrap the Dataset yourself)
-            return {
-                "train": build_det_dataloader(
-                    batch_size=data_cfg.batch_size,
-                    num_workers=data_cfg.num_workers,
-                    input_downscale=data_cfg.downscale,
-                    label_downscale=data_cfg.downscale,
-                ),
-                "val": build_det_dataloader(
-                    batch_size=data_cfg.batch_size,
-                    num_workers=data_cfg.num_workers,
-                    input_downscale=data_cfg.downscale,
-                    label_downscale=data_cfg.downscale,
-                ),
-            }
+            return build_det_dataloaders(
+                batch_size=data_cfg.batch_size,
+                num_workers=data_cfg.num_workers,
+                input_downscale=data_cfg.downscale,
+                label_downscale=data_cfg.downscale,
+                train_split=0.8  # or expose as cfg parameter
+            )
 
         else:
             raise ValueError(f"Unknown data.loader: {data_cfg.loader}")
