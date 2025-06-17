@@ -1,5 +1,5 @@
 description: >
-  Spiking SNN training smaller unet
+  Spiking SNN training with config profiles
 
 defaults:
   model: unet # base or unet
