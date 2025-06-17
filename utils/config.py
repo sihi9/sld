@@ -1,14 +1,46 @@
 import yaml
+import os
 from types import SimpleNamespace
 import argparse
 from typing import Any, Dict, Union
 import torch
 
-def load_config(path="configs/default.yaml"):
-    with open(path, "r") as f:
-        cfg_dict = yaml.safe_load(f)
-    return dict_to_namespace(cfg_dict)
+def load_config(path="configs/default.yaml", model=None, data=None, overrides=None, resume_path=None):
+    
+    
+    if resume_path:
+        # Load flat snapshot config
+        resume_config_path = os.path.join(resume_path, "config.yaml")
+        with open(resume_config_path, "r") as f:
+            cfg = yaml.safe_load(f)
+        return dict_to_namespace(cfg)
 
+    # Load base/default config
+    with open(path, "r") as f:
+        cfg = yaml.safe_load(f)
+
+    # Determine active model/data keys
+    model_key = model or cfg.get("defaults", {}).get("model", "base")
+    data_key = data or cfg.get("defaults", {}).get("data", "demo")
+
+    # Load selected model config file
+    model_path = os.path.join("configs", "model", f"{model_key}.yaml")
+    with open(model_path, "r") as f:
+        cfg["model"] = yaml.safe_load(f)
+
+    # Load selected data config file
+    data_path = os.path.join("configs", "data", f"{data_key}.yaml")
+    with open(data_path, "r") as f:
+        cfg["data"] = yaml.safe_load(f)
+
+    # Apply CLI overrides
+    if overrides:
+        if overrides.train_lr is not None:
+            cfg.setdefault("train", {})["lr"] = overrides.train_lr
+        if overrides.model_hidden_dim is not None:
+            cfg.setdefault("model", {})["hidden_dim"] = overrides.model_hidden_dim
+
+    return dict_to_namespace(cfg)
 
 def dict_to_namespace(d):
     """Recursively convert a nested dict to SimpleNamespace."""

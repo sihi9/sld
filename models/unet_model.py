@@ -10,7 +10,7 @@ class SpikingUNetRNN(nn.Module):
         in_channels=1,
         out_channels=1,
         input_size=(128, 128),
-        features=(64, 128, 256, 512),
+        features=(64, 128, 256),
         hidden_dim=512,
         output_timesteps=1,
         use_plif_encoder=False,
@@ -43,7 +43,7 @@ class SpikingUNetRNN(nn.Module):
         assert (
             H % downscaling_factor == 0 
             and W % downscaling_factor == 0
-        ), f"Input size must be divisible by {downscaling_factor} for {len(features)}x stride-2 downsamples."
+        ), f"Input size {H}x{W} must be divisible by {downscaling_factor} for {len(features)}x stride-2 downsamples."
 
 
         bottom_H = H // (2 ** depth)
