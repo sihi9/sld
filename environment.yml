@@ -1,0 +1,17 @@
+name: snn
+channels:
+  - pip
+  - defaults
+dependencies:
+  - python=3.10
+  - pytorch
+  - matplotlib
+  - conda-forge::spikingjelly
+  - cpuonly
+  - torchaudio
+  - torchvision
+  - conda-forge::tensorboard
+  - pandas[version='>=1.2.0']
+  - h5py
+  - torchinfo
+prefix: /home/simon/miniconda3/envs/snn
