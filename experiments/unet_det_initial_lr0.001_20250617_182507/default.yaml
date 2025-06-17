@@ -1,0 +1,16 @@
+description: >
+  Spiking SNN training smaller unet
+
+defaults:
+  model: unet # base or unet
+  data: det   # det or demo
+
+train:
+  epochs: 20
+  lr: 0.001
+  amp: false
+  device: auto
+  save_intermediate: false
+
+log:
+  vis_interval: -1

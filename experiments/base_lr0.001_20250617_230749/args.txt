@@ -1,1 +1,0 @@
-Namespace(eval_checkpoint=None, model='base', data='demo', train_lr=None, model_hidden_dim=None, resume_from=None)

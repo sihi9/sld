@@ -213,7 +213,7 @@ def plot_sample_sequence(inputs, labels, sample_idx=0, history=None, save_path=N
 # Test visualization
 if __name__ == "__main__":
     loader = build_demo_dataloader(input_size=(32, 32), 
-                                   time_steps=10,
+                                   time_steps=5,
                                    num_samples=1, 
                                    moving=True,
                                    noise=0.1,

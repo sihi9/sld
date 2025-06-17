@@ -1,0 +1,1 @@
+Namespace(eval_checkpoint=None, model=None, data=None, train_lr=None, model_hidden_dim=None, resume_from=None)
