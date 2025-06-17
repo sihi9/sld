@@ -1,13 +1,14 @@
 name: snn
 channels:
   - pip
+  - pytorch
+  - conda-forge
   - defaults
 dependencies:
   - python=3.10
   - pytorch
   - matplotlib
   - conda-forge::spikingjelly
-  - cpuonly
   - torchaudio
   - torchvision
   - conda-forge::tensorboard
