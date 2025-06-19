@@ -41,8 +41,7 @@ class DataModule:
             return build_det_dataloaders(
                 batch_size=data_cfg.batch_size,
                 num_workers=data_cfg.num_workers,
-                input_downscale=data_cfg.downscale,
-                label_downscale=data_cfg.downscale,
+                downscale_factor=data_cfg.downscale,
                 train_split=0.8  # or expose as cfg parameter
             )
 

@@ -15,7 +15,7 @@ def _downscale_frame(img: np.ndarray, factor: int) -> np.ndarray:
     H2, W2 = H // factor, W // factor
     img_ds = cv2.resize(img, (W2, H2), interpolation=cv2.INTER_AREA)
     # re-binarize (removes isolated noise)
-    _, img_bin = cv2.threshold(img_ds, 127, 255, cv2.THRESH_BINARY)
+    _, img_bin = cv2.threshold(img_ds, 255//factor, 255, cv2.THRESH_BINARY)
     return img_bin
 
 
@@ -23,9 +23,16 @@ def _downscale_label(img: np.ndarray, factor: int) -> np.ndarray:
     """Downscale integer-labelled mask with nearest-neighbor interpolation."""
     if factor == 1:
         return img
+    
+   
     H, W = img.shape
     H2, W2 = H // factor, W // factor
-    return cv2.resize(img, (W2, H2), interpolation=cv2.INTER_NEAREST)
+    # Problem are disappearing labels, workaround is to use area interpolation
+    #return cv2.resize(img, (W2, H2), interpolation=cv2.INTER_NEAREST)
+    
+    downscaled = cv2.resize(img * factor, (W2, H2), interpolation=cv2.INTER_AREA)
+    # Now threshold — retain block if any lane pixels were present
+    return (downscaled > 0.05).astype(np.uint8)  # OR use >0.05 to be stricter
 
 
 class HDF5Dataset(Dataset):
@@ -34,20 +41,17 @@ class HDF5Dataset(Dataset):
 
     Args:
         h5_path: Path to the HDF5 file containing 'X', 'Y', and optionally 'snapshot_idx'.
-        input_downscale: Downscale factor for input frames (integer >=1).
-        label_downscale: Downscale factor for label masks (integer >=1).
+        downscale_factor: Factor by which to downscale the frames and labels.
         filter_fn: Optional function (X: np.ndarray, Y: np.ndarray) -> bool
                    to include/exclude samples.
     """
     def __init__(self,
                  h5_path: str,
-                 input_downscale: int = 1,
-                 label_downscale: int = 1,
+                 downscale_factor: int = 1,
                  filter_fn=None):
         path_prefix = './data/DET/'  # Assuming data files are in a 'data' directory
         self.h5_path = path_prefix + h5_path
-        self.input_downscale = input_downscale
-        self.label_downscale = label_downscale
+        self.downscale_factor = downscale_factor
         self.filter_fn = filter_fn
 
         # Open in read-only mode
@@ -84,14 +88,14 @@ class HDF5Dataset(Dataset):
         frames = []
         for t in range(T):
             img = x_np[t, 0, :, :].astype(np.uint8)
-            img_ds = _downscale_frame(img, self.input_downscale)
+            img_ds = _downscale_frame(img, self.downscale_factor)
             frames.append(img_ds)
         x_ds = np.stack(frames, axis=0)  # (T,H2,W2)
         x_ds = x_ds[:, np.newaxis, :, :]  # (T,1,H2,W2)
 
         # Process label
-        lab = y_np[0].astype(np.uint8)
-        lab_ds = _downscale_label(lab, self.label_downscale)
+        lab = (y_np[0] > 0).astype(np.uint8)    # make binary
+        lab_ds = _downscale_label(lab, self.downscale_factor)
         lab_ds = lab_ds[np.newaxis, :, :]  # (1,H2,W2)
 
         # make sure the image can be fed into a U-Net model with 3 2x2 downscales
@@ -118,10 +122,9 @@ class HDF5Dataset(Dataset):
         
         # Convert to torch.Tensor
         x_tensor = torch.from_numpy(x_ds).float() / 255.0
-        y_tensor = torch.from_numpy(lab_ds).long()
-        y_binary = (y_tensor != 0).float()  # Convert to binary mask
+        y_tensor = torch.from_numpy(lab_ds).float()
         
-        return x_tensor, y_binary
+        return x_tensor, y_tensor
 
     def close(self):
         """Close the underlying HDF5 file."""
@@ -137,10 +140,10 @@ class HDF5Dataset(Dataset):
 
 def build_det_dataloaders(batch_size=4, 
                          num_workers=0, 
-                         input_downscale=1,
-                         label_downscale=1,
+                         downscale_factor=1,
                          train_split=0.8,
-                         seed=42
+                         seed=42,
+                         shuffle=True,
                          ):
     """
     Build a DataLoader for the demo segmentation dataset.
@@ -153,9 +156,8 @@ def build_det_dataloaders(batch_size=4,
         moving: If True, produces moving lines; otherwise static lines.
     """
     dataset = HDF5Dataset(
-        h5_path='20190217_1156_x4.h5',  # todo: load all files in the DET directory
-        input_downscale=input_downscale,
-        label_downscale=label_downscale,
+        h5_path='20190217_1156_T30_x4_th63.h5',  # todo: load all files in the DET directory
+        downscale_factor=downscale_factor,
     )
     total_size = len(dataset)
     train_size = int(train_split * total_size)
@@ -164,7 +166,7 @@ def build_det_dataloaders(batch_size=4,
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size], generator=generator)
 
     return {
-        "train": DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers),
+        "train": DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers),
         "val": DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers),
     }
 
@@ -198,8 +200,8 @@ def plot_sample_sequence(inputs, labels, history=10, save_path=None, show=True):
 
     # Dynamically adjust figure size
     # Each frame column approx 2 inches, but minimum width 6 inches
-    fig_width = max(n * 2, 6)
-    fig_height = 3
+    fig_width = max(n * 2.5, 8)
+    fig_height = 4
     # Set up figure: single row with n columns, last column wider
     width_ratios = [1] * (n - 1) + [2]
     fig = plt.figure(figsize=(fig_width, fig_height))
@@ -233,10 +235,10 @@ def plot_sample_sequence(inputs, labels, history=10, save_path=None, show=True):
 # Example usage guard
 if __name__ == '__main__':
     # Quick test
-    loader = build_det_dataloaders()["train"]
+    loader = build_det_dataloaders(downscale_factor=8, shuffle=False)["train"]
     
     for x, y in loader:
         print("Input:", x.shape)  
         print("Label:", y.shape)
-        plot_sample_sequence(x, y)
+        plot_sample_sequence(x, y, history=1)
         break
