@@ -2,8 +2,8 @@ loader: demo
 batch_size: 4
 num_workers: 4
 num_samples: 1000
-time_steps: 10
-input_size: [32, 32]
+time_steps: 30
+input_size: [64, 64]
 moving: true
 noise: 0.1
 heavy_noise: 0.4
