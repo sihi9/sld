@@ -1,7 +1,7 @@
 name: unet
 features: [16, 32, 64, 128]
 hidden_dim: 512 
-recurrent: false
+recurrent: true
 output_timesteps: 1
 use_plif_encoder: false
 use_plif_recurrent: true
