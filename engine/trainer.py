@@ -63,24 +63,22 @@ def train(model,
             avg_loss = running_loss / total_batches
 
             loop.set_postfix(train_loss=avg_loss)
-            
-            if loss.item() > (2.5 * prev_avg_loss):
-                visualize_batch_predictions(inputs, targets, model, device, logger, epoch, title_tag="loss_spike")
-
-            
+         
             # log last batch
             if logger is not None and total_batches == len(train_loader) - 1:                
                 log_from_monitors(model, logger, epoch)
             
-            
             functional.reset_net(model)
+            
+            if loss.item() > (2.5 * prev_avg_loss):
+                visualize_batch_predictions(inputs, targets, outputs, logger, epoch, title_tag="loss_spike")
+            
             
             # clear monitors
             if hasattr(model, 'output_monitor') and model.output_monitor is not None:
                 model.output_monitor.clear_recorded_data()
             if hasattr(model, 'v_monitor') and model.v_monitor is not None:
                 model.v_monitor.clear_recorded_data()
-                    
 
         # Log training loss for the epoch
         train_loss = running_loss / total_batches

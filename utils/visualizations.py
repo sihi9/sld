@@ -43,11 +43,9 @@ def visualize_random_batch(model, dataloader, device, sample_idx=0, n=3, time_id
 def visualize_batch_predictions(
     input_seq: torch.Tensor,
     label_seq: torch.Tensor,
-    model: nn.Module,
-    device: torch.device,
+    output_seq: torch.Tensor,
     logger: Optional[SpikeLogger] = None,
     step: int = 0,
-    n: int = 3,
     title_tag: str = "batch_sample"
 ):
     """
@@ -56,26 +54,19 @@ def visualize_batch_predictions(
     Args:
         input_seq: [T, B, C, H, W]
         label_seq: [B, 1, H, W]
+        output_seq: [B, 1, H, W]
     """
-    model.eval()
-    with torch.no_grad():
-        input_seq = input_seq.to(device)
-        label_seq = label_seq.to(device)
-        output_seq = model(input_seq)
+    
+    fig = show_sample_triplet(input_seq.cpu(),
+                            output_seq.cpu(),
+                            label_seq.cpu(),
+                            n=label_seq.shape[0])
 
-        fig = show_sample_triplet(input_seq.cpu(),
-                                  output_seq.cpu(),
-                                  label_seq.cpu(),
-                                  n=n)
-
-        if logger:
-            logger.writer.add_figure(f"predictions/{title_tag}", fig, global_step=step)
-        else:
-            plt.show()
-
-    functional.reset_net(model)
-
-
+    if logger:
+        logger.writer.add_figure(f"predictions/{title_tag}", fig, global_step=step)
+    else:
+        plt.show()
+    
 
 def show_sample_triplet(input_seq, output_seq, label_seq, n=3, figsize=(8, 8), cmap='gray'):
     """
@@ -195,7 +186,7 @@ def log_linear_weights_histogram_named(name: str, module: nn.Module, logger: Spi
 
 def log_linear_weights_heatmap_named(name: str, module: nn.Module, logger: SpikeLogger, step: int) -> None:
     weight = module.weight.data.cpu().numpy()
-    fig, ax = plt.subplots(figsize=(6, 5))
+    fig, ax = plt.subplots(figsize=(12, 10))
     ax.imshow(weight, aspect='auto', cmap='viridis')
     ax.set_title(f"Heatmap - {name}")
     ax.set_xlabel("Input Neurons")
@@ -220,4 +211,3 @@ def log_tau_per_plif_layer(model: nn.Module, logger: SpikeLogger, step: int):
         if isinstance(module, neuron.ParametricLIFNode):
             tau = 1.0 / module.w.sigmoid().detach()
             logger.writer.add_histogram(f"NeuronTau/{name}", tau, global_step=step)
-

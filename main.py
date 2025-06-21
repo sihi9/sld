@@ -27,7 +27,6 @@ def main():
     
     exp = ExperimentManager(cfg, args)
     logger = exp.get_logger()
-    
 
     # Data
     loaders = DataModule(cfg).get_loaders()
