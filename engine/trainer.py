@@ -6,7 +6,7 @@ from engine.evaluator import evaluate
 from utils.monitoring import SpikeLogger
 from torch.utils.tensorboard import SummaryWriter
 from utils.visualizations import visualize_weights, visualize_batch_predictions
-
+from utils.monitoring import log_from_monitors
 
 def train(model, 
           train_loader, 
@@ -57,7 +57,6 @@ def train(model,
 
             optimizer.step()
             
-            
             total_batches += 1
             prev_avg_loss = running_loss / total_batches if total_batches > 1 else loss.item()
             running_loss += loss.item()
@@ -65,27 +64,29 @@ def train(model,
 
             loop.set_postfix(train_loss=avg_loss)
             
-            
             if loss.item() > (2.5 * prev_avg_loss):
                 visualize_batch_predictions(inputs, targets, model, device, logger, epoch, title_tag="loss_spike")
 
-
+            
+            # log last batch
+            if logger is not None and total_batches == len(train_loader) - 1:                
+                log_from_monitors(model, logger, epoch)
+            
+            
             functional.reset_net(model)
             
-            # Clear monitors
+            # clear monitors
             if hasattr(model, 'output_monitor') and model.output_monitor is not None:
                 model.output_monitor.clear_recorded_data()
             if hasattr(model, 'v_monitor') and model.v_monitor is not None:
                 model.v_monitor.clear_recorded_data()
-                
-                       
+                    
 
         # Log training loss for the epoch
         train_loss = running_loss / total_batches
         logger.log_scalar("Loss/Train", train_loss, epoch)
 
         if logger is not None:
-            from utils.monitoring import log_from_monitors
             log_from_monitors(model, logger, epoch)
             visualize_weights(
                 model, 
