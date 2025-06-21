@@ -118,14 +118,10 @@ class SpikingUNetRNN(nn.Module):
         if self.visualize:
             self.output_monitor = monitor.OutputMonitor(self, 
                                                         (neuron.LIFNode, neuron.ParametricLIFNode, layer.LinearRecurrentContainer))
-            self.v_monitor = monitor.AttributeMonitor('v_seq', 
-                                                    pre_forward=False, 
-                                                    net=self, 
-                                                    instance=(neuron.LIFNode, neuron.ParametricLIFNode))
             
-            for m in self.modules():
-                if isinstance(m, (neuron.LIFNode, neuron.ParametricLIFNode)):
-                    m.store_v_seq = True
+            # for m in self.modules():
+            #     if isinstance(m, (neuron.LIFNode, neuron.ParametricLIFNode)):
+            #         m.store_v_seq = True
                     
         
         # Use multi-step mode
