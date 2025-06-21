@@ -159,14 +159,16 @@ def log_spike_rate_summary(model, logger: SpikeLogger, epoch: int):
         records = model.output_monitor[layer_name]
         if not records or len(records) == 0:
             continue
-        spikes = records[0][:, 0]  # shape [T, ...]
+        
+        spikes = records[0].detach() # [T, B, ...]   
+        spikes = spikes.float().mean(dim=1)   # average over batch
         
         if spikes.dim() == 2:
             rate = spikes.float().mean(dim=0).cpu().numpy()  # [N]
         elif spikes.dim() == 4:
             rate = spikes.float().mean(dim=(0, 2, 3)).cpu().numpy()  # [C]
         else:
-            continue
+            print(f"⚠️ Skipped {layer_name}: unexpected shape {records[0].shape}")
 
         fig, ax = plt.subplots()
         ax.bar(np.arange(len(rate)), rate)
