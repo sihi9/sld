@@ -11,7 +11,7 @@ from engine.trainer import train
 from engine.evaluator import run_final_evaluation_and_save
 
 
-from utils.visualizations import visualize_predictions
+from utils.visualizations import visualize_random_batch
 from utils.config import load_config, get_device
 from utils.experiment import ExperimentManager
 
@@ -72,8 +72,8 @@ def main():
         raise ValueError(f"Unknown model type: {cfg.model.name}")
     
     exp.log_model_summary(model, input_shape=(T, B, C_in, H_in, W_in))
-    if cfg.log.vis_interval > 0:    # todo: find a way that doesnt need v_monitor
-        exp.log_neuron_counts(model, input_shape=(T, B, C_in, H_in, W_in))
+    # if cfg.log.vis_interval > 0:    # todo: find a way that doesnt need v_monitor
+    #     exp.log_neuron_counts(model, input_shape=(T, B, C_in, H_in, W_in))
     
     # Load pretrained weights if available
     if args.eval_checkpoint:
@@ -82,7 +82,7 @@ def main():
         model.to(device)
         model.eval()
 
-        visualize_predictions(model, val_loader, device=cfg.train.device)
+        visualize_random_batch(model, val_loader, device=cfg.train.device)
         return  # Exit after evaluation
     
     # Optimizer & AMP
@@ -112,7 +112,7 @@ def main():
         checkpoint_dir=logger.checkpoint_dir
     )
         
-    visualize_predictions(model, val_loader, device=device, logger=logger, step=cfg.train.epochs)
+    visualize_random_batch(model, val_loader, device=device, logger=logger, step=cfg.train.epochs)
 
     logger.close()
 

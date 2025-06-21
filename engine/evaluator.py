@@ -88,6 +88,13 @@ def evaluate(model, dataloader, device, loss_fn=None, use_amp=False):
             total_batches += 1
 
             functional.reset_net(model)
+             
+            # Clear monitors
+            if hasattr(model, 'output_monitor') and model.output_monitor is not None:
+                model.output_monitor.clear_recorded_data()
+            if hasattr(model, 'v_monitor') and model.v_monitor is not None:
+                model.v_monitor.clear_recorded_data()
+                
 
     avg_loss = total_loss / total_batches
     avg_iou = total_iou / total_batches

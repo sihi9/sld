@@ -11,7 +11,7 @@ import torchvision.transforms.functional as TF
 
 from utils.monitoring import SpikeLogger
 
-def visualize_predictions(model, dataloader, device, sample_idx=0, n=3, time_idx=0, logger=None, step=0):
+def visualize_random_batch(model, dataloader, device, sample_idx=0, n=3, time_idx=0, logger=None, step=0):
     """
     Visualizes predictions and optionally logs to TensorBoard.
 
@@ -38,6 +38,43 @@ def visualize_predictions(model, dataloader, device, sample_idx=0, n=3, time_idx
             break  
 
     functional.reset_net(model)
+
+
+def visualize_batch_predictions(
+    input_seq: torch.Tensor,
+    label_seq: torch.Tensor,
+    model: nn.Module,
+    device: torch.device,
+    logger: Optional[SpikeLogger] = None,
+    step: int = 0,
+    n: int = 3,
+    title_tag: str = "batch_sample"
+):
+    """
+    Visualizes model predictions for a specific batch.
+
+    Args:
+        input_seq: [T, B, C, H, W]
+        label_seq: [B, 1, H, W]
+    """
+    model.eval()
+    with torch.no_grad():
+        input_seq = input_seq.to(device)
+        label_seq = label_seq.to(device)
+        output_seq = model(input_seq)
+
+        fig = show_sample_triplet(input_seq.cpu(),
+                                  output_seq.cpu(),
+                                  label_seq.cpu(),
+                                  n=n)
+
+        if logger:
+            logger.writer.add_figure(f"predictions/{title_tag}", fig, global_step=step)
+        else:
+            plt.show()
+
+    functional.reset_net(model)
+
 
 
 def show_sample_triplet(input_seq, output_seq, label_seq, n=3, figsize=(8, 8), cmap='gray'):

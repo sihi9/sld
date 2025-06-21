@@ -1,5 +1,5 @@
 description: >
-  Non-recurrent UNet training configuration
+  Recurrent UNet training configuration
 
 defaults:
   model: unet # base or unet
@@ -13,4 +13,4 @@ train:
   save_intermediate: false
 
 log:
-  vis_interval: -1
+  vis_interval: 10
