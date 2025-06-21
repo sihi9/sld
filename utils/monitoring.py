@@ -46,9 +46,6 @@ def log_from_monitors(model, logger: SpikeLogger, epoch: int):
 
     #print("Logging membrane potentials...")
     #log_membrane_from_monitor(model, logger, epoch)
-    
-    print("Logging spike rates...")
-    log_spike_rate_summary(model, logger, epoch)
 
 
 def log_spikes_from_monitor(model, logger: SpikeLogger, epoch: int):
