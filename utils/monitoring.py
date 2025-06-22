@@ -46,6 +46,8 @@ def log_from_monitors(model, logger: SpikeLogger, epoch: int):
 
     #print("Logging membrane potentials...")
     #log_membrane_from_monitor(model, logger, epoch)
+    
+    log_spike_rate_summary(model, logger, epoch)
 
 
 def log_spikes_from_monitor(model, logger: SpikeLogger, epoch: int):
@@ -170,7 +172,7 @@ def log_spike_rate_summary(model, logger: SpikeLogger, epoch: int):
         fig, ax = plt.subplots()
         ax.bar(np.arange(len(rate)), rate)
         ax.set_title(f"Avg Spike Rate - {layer_name}")
-        ax.set_xlabel("Neuron Index" if rate.ndim == 1 else "Channel Index")
+        ax.set_xlabel("Neuron Index" if spikes.dim() == 2 else "Channel Index")
         ax.set_ylabel("Firing Rate")
         logger.writer.add_figure(f"spike_rate_summary/{layer_name}", fig, epoch)
         

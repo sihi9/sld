@@ -127,7 +127,7 @@ class SpikingUNetRNN(nn.Module):
         # Use multi-step mode
         functional.set_step_mode(self, step_mode='m')
 
-    def forward(self, x: torch.Tensor, return_seq : bool = False) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, return_logits : bool = False) -> torch.Tensor:
         # x: [T, B, C, H, W]
         # Reset states
         for m in self.modules():
@@ -172,13 +172,15 @@ class SpikingUNetRNN(nn.Module):
         _ = self.output_integrator(x)  # integrate spikes to get membrane potential
         v_seq = self.output_integrator.v_seq
         
-        if return_seq: # todo: this does not work yet
-            return v_seq
+        v_agg = self.aggregate_output(v_seq)        # [B, 1, H, W]
+        logits = self.output_scale * (v_agg - self.output_bias)
+        
+        if return_logits: # todo: this does not work yet
+            return logits
         else:
-            v_agg = self.aggregate_output(v_seq)        # [B, 1, H, W]
-            logits = self.output_scale * (v_agg - self.output_bias)
             probabilities = torch.sigmoid(logits)
             return probabilities
+
     
     def aggregate_output(self, v_seq: torch.Tensor):
         """
