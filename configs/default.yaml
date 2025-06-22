@@ -3,14 +3,14 @@ description: >
 
 defaults:
   model: unet # base or unet
-  data: demo   # det or demo
+  data: det   # det or demo
 
 train:
-  epochs: 10
+  epochs: 100
   lr: 0.001
   amp: false
   device: auto
   save_intermediate: false
 
 log:
-  vis_interval: 1
+  vis_interval: 10

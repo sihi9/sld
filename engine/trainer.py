@@ -25,8 +25,14 @@ def train(model,
     model.to(device)
     model.train()
 
+
+    def weighted_bce(preds, targets, pos_weight=5.0):
+        weights = torch.where(targets == 1, pos_weight, 1.0)
+        return F.binary_cross_entropy(preds, targets, weight=weights)
+
     if loss_fn is None:
-        loss_fn = F.binary_cross_entropy
+        # pos_weight should be a 1-element tensor
+        loss_fn = lambda preds, targets: weighted_bce(preds, targets, pos_weight=15.0)
 
     best_val_iou = 0.0
 
@@ -42,7 +48,7 @@ def train(model,
             optimizer.zero_grad()
 
             # todo: use amp
-            outputs = model(inputs)            
+            outputs = model(inputs)  # [B, C, H, W]      
             loss = loss_fn(outputs, targets) 
             loss.backward()
             
