@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from spikingjelly.activation_based import functional
 from tqdm import tqdm
-from engine.evaluator import evaluate
+from engine.evaluator import evaluate, compute_batch_iou
 from utils.monitoring import SpikeLogger
 from torch.utils.tensorboard import SummaryWriter
 from utils.visualizations import visualize_weights, visualize_batch_predictions
@@ -32,12 +32,13 @@ def train(model,
 
     if loss_fn is None:
         # pos_weight should be a 1-element tensor
-        loss_fn = lambda preds, targets: weighted_bce(preds, targets, pos_weight=15.0)
+        loss_fn = lambda preds, targets: weighted_bce(preds, targets, pos_weight=5.0)
 
     best_val_iou = 0.0
 
     for epoch in range(epochs):
         running_loss = 0.0
+        running_iou = 0.0
         total_batches = 0
 
         loop = tqdm(train_loader, desc=f"Epoch [{epoch+1}/{epochs}]", leave=True)
@@ -67,6 +68,9 @@ def train(model,
             prev_avg_loss = running_loss / total_batches if total_batches > 1 else loss.item()
             running_loss += loss.item()
             avg_loss = running_loss / total_batches
+            
+            iou = compute_batch_iou(outputs, targets)
+            running_iou += iou
 
             loop.set_postfix(train_loss=avg_loss)
          
@@ -88,13 +92,15 @@ def train(model,
 
         # Log training loss for the epoch
         train_loss = running_loss / total_batches
+        train_iou = running_iou / total_batches
         logger.log_scalar("Loss/Train", train_loss, epoch)
+        logger.log_scalar("IoU/Train", train_iou, epoch)
 
         if logger is not None:
             log_from_monitors(model, logger, epoch)
             visualize_weights(
                 model, 
-                logger, 
+                logger,
                 epoch,
                 layer_logging_prefs={
                     "recurrent": "heatmap",      # recurrent layers → heatmap
