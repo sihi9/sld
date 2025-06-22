@@ -48,12 +48,14 @@ class HDF5Dataset(Dataset):
     def __init__(self,
                  h5_path: str,
                  downscale_factor: int = 1,
-                 filter_fn=None):
+                 filter_fn=None,
+                 used_T = None):
         path_prefix = './data/DET/'  # Assuming data files are in a 'data' directory
         self.h5_path = path_prefix + h5_path
         self.downscale_factor = downscale_factor
         self.filter_fn = filter_fn
-
+        self.used_T = used_T
+        
         # Open in read-only mode
         self._h5 = h5py.File(self.h5_path, 'r')
         self._X = self._h5['X']
@@ -83,6 +85,11 @@ class HDF5Dataset(Dataset):
         # Downscale each frame and label
         # Convert to uint8 numpy
         T, C, H, W = x_np.shape
+        
+        if self.used_T is not None and self.used_T < T:
+            x_np = x_np[-self.used_T:]  # Keep last `used_T` frames
+            T = self.used_T
+    
         # Process frames
         
         frames = []
@@ -141,6 +148,7 @@ class HDF5Dataset(Dataset):
 def build_det_dataloaders(batch_size=4, 
                          num_workers=0, 
                          downscale_factor=1,
+                         used_T=None,
                          train_split=0.8,
                          seed=42,
                          shuffle=True,
@@ -158,6 +166,7 @@ def build_det_dataloaders(batch_size=4,
     dataset = HDF5Dataset(
         h5_path='20190217_1156_T30_x4_th63.h5',  # todo: load all files in the DET directory
         downscale_factor=downscale_factor,
+        used_T=used_T,
     )
     total_size = len(dataset)
     train_size = int(train_split * total_size)

@@ -42,6 +42,7 @@ class DataModule:
                 batch_size=data_cfg.batch_size,
                 num_workers=data_cfg.num_workers,
                 downscale_factor=data_cfg.downscale,
+                used_T=data_cfg.used_T,
                 train_split=0.8  # or expose as cfg parameter
             )
 
