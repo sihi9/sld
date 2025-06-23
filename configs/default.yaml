@@ -1,5 +1,5 @@
 description: >
-  Recurrent UNet training configuration
+  Recurrent UNet training configuration with 10 timesteps and high pos weight scaling
 
 defaults:
   model: unet # base or unet
@@ -13,4 +13,4 @@ train:
   save_intermediate: false
 
 log:
-  vis_interval: 10
+  vis_interval: 30
