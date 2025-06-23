@@ -2,7 +2,7 @@ description: >
   Recurrent UNet training configuration
 
 defaults:
-  model: unet # base or unet
+  model: base # base or unet
   data: det   # det or demo
 
 train:
