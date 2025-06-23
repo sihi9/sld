@@ -143,42 +143,66 @@ class HDF5Dataset(Dataset):
         except:
             pass
 
-
-
+class MultiHDF5Dataset(Dataset):
+    def __init__(self, h5_paths, downscale_factor=1, filter_fn=None, used_T=None):
+        self.datasets = [
+            HDF5Dataset(h5_path=path,
+                        downscale_factor=downscale_factor,
+                        filter_fn=filter_fn,
+                        used_T=used_T)
+            for path in h5_paths
+        ]
+        self.cumulative_lengths = np.cumsum([len(ds) for ds in self.datasets])
+        
+    def __len__(self):
+        return self.cumulative_lengths[-1]
+    
+    def __getitem__(self, idx):
+        dataset_idx = np.searchsorted(self.cumulative_lengths, idx, side='right')
+        local_idx = idx if dataset_idx == 0 else idx - self.cumulative_lengths[dataset_idx - 1]
+        return self.datasets[dataset_idx][local_idx]
+    
+    def close(self):
+        for ds in self.datasets:
+            ds.close()
+            
 def build_det_dataloaders(batch_size=4, 
-                         num_workers=0, 
-                         downscale_factor=1,
-                         used_T=None,
-                         train_split=0.8,
-                         seed=42,
-                         shuffle=True,
-                         ):
-    """
-    Build a DataLoader for the demo segmentation dataset.
-    Args:
-        batch_size: Number of samples per batch.
-        time_steps: Number of time steps in each sample.
-        input_size: Tuple (H, W)
-        num_workers: Number of workers for data loading.
-        num_samples: Total number of samples in the dataset.
-        moving: If True, produces moving lines; otherwise static lines.
-    """
-    dataset = HDF5Dataset(
-        h5_path='20190217_1156_T30_x4_th63.h5',  # todo: load all files in the DET directory
+                          num_workers=0, 
+                          downscale_factor=1,
+                          used_T=None,
+                          train_split=0.8,
+                          seed=42,
+                          shuffle=True,
+                          test_file='20190222_1707_T30_x4.h5',
+                          data_dir='./data/DET/'):
+    all_files = [f for f in os.listdir(data_dir) if f.endswith('.h5')]
+    train_val_files = [f for f in all_files if f != test_file]
+
+    # Build dataset for training and validation
+    dataset = MultiHDF5Dataset(
+        h5_paths=train_val_files,
         downscale_factor=downscale_factor,
-        used_T=used_T,
+        used_T=used_T
     )
+
     total_size = len(dataset)
     train_size = int(train_split * total_size)
     val_size = total_size - train_size
     generator = torch.Generator().manual_seed(seed)
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size], generator=generator)
 
+    # Build dataset for testing
+    test_dataset = HDF5Dataset(
+        h5_path=test_file,
+        downscale_factor=downscale_factor,
+        used_T=used_T
+    )
+
     return {
         "train": DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers),
         "val": DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers),
+        "test": DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     }
-
 
 def plot_sample_sequence(inputs, labels, history=10, save_path=None, show=True):
     """
@@ -244,7 +268,7 @@ def plot_sample_sequence(inputs, labels, history=10, save_path=None, show=True):
 # Example usage guard
 if __name__ == '__main__':
     # Quick test
-    loader = build_det_dataloaders(downscale_factor=8, shuffle=False)["train"]
+    loader = build_det_dataloaders(downscale_factor=1, shuffle=False)["train"]
     
     for x, y in loader:
         print("Input:", x.shape)  
