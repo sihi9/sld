@@ -2,7 +2,7 @@ description: >
   Recurrent UNet training configuration with 10 timesteps and high pos weight scaling
 
 defaults:
-  model: unet # base or unet
+  model: base # base or unet
   data: det   # det or demo
 
 train:
