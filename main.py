@@ -32,6 +32,7 @@ def main():
     loaders = DataModule(cfg).get_loaders()
     train_loader = loaders['train']
     val_loader = loaders['val']
+    test_loader = loaders['test'] 
     
     # grab one batch to inspect its spatial size
     x_sample, y_sample = next(iter(train_loader))
@@ -111,7 +112,7 @@ def main():
         checkpoint_dir=logger.checkpoint_dir
     )
         
-    visualize_random_batch(model, val_loader, device=device, logger=logger, step=cfg.train.epochs)
+    visualize_random_batch(model, test_loader, device=device, logger=logger, step=cfg.train.epochs)
 
     logger.close()
 

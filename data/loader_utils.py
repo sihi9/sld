@@ -32,6 +32,17 @@ class DataModule:
                     heavy_noise=data_cfg.heavy_noise,
                     heavy_noise_prob=data_cfg.heavy_noise_prob,
                 ),
+                "test": build_demo_dataloader(
+                    batch_size=data_cfg.batch_size,
+                    time_steps=data_cfg.time_steps,
+                    input_size=tuple(data_cfg.input_size),
+                    num_workers=data_cfg.num_workers,
+                    num_samples=int(data_cfg.num_samples * 0.2),  # or use a separate test set
+                    moving=data_cfg.moving,
+                    noise=data_cfg.noise,
+                    heavy_noise=data_cfg.heavy_noise,
+                    heavy_noise_prob=data_cfg.heavy_noise_prob,
+                )
             }
 
         elif data_cfg.loader == "det":
