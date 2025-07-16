@@ -1,4 +1,6 @@
 import io
+import os
+import cv2
 from typing import Dict, Literal, Optional
 
 import matplotlib.pyplot as plt
@@ -98,7 +100,84 @@ def show_sample_triplet(input_seq, output_seq, label_seq, n=3, figsize=(8, 8), c
     return fig
 
 
+def visualize_predictions_video(
+    model: torch.nn.Module,
+    dataloader: torch.utils.data.DataLoader,
+    device: torch.device,
+    save_dir: str = "./outputs/test_video",
+    all_timesteps: bool = True,
+    fps: int = 10,
+    threshold: float = 0.5,
+):
+    """
+    Generates a video from the entire test set sequence with overlaid predictions and ground truth.
+    - If all_timesteps=True, visualize all frames per sample.
+    - Otherwise, visualize only the final frame of each sample.
 
+    Args:
+        model: Trained PyTorch model
+        dataloader: Test DataLoader
+        device: Torch device
+        save_dir: Output directory
+        all_timesteps: Whether to use all T timesteps or just the last
+        fps: Video FPS
+        threshold: Output threshold for binary prediction
+    """
+    os.makedirs(save_dir, exist_ok=True)
+    model.eval()
+    frame_paths = []
+    with torch.no_grad():
+        idx = 0
+        for batch in dataloader:
+            inputs, labels = batch  # inputs: [B, T, 1, H, W], labels: [B, 1, H, W]
+            B, T, _, H, W = inputs.shape
+
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+            input_seq = inputs.permute(1, 0, 2, 3, 4)  # [T, B, 1, H, W]
+            outputs = model(input_seq)                # [B, 1, H, W]
+            preds = (outputs > threshold).float()
+
+            for b in range(B):
+                x = inputs[b]       # (T, 1, H, W)
+                y = labels[b]       # (1, H, W)
+                pred = preds[b]     # (1, H, W)
+
+                for t in range(T if all_timesteps else T-1, T):
+                    img = x[t, 0].cpu().numpy()
+                    img_rgb = np.stack([img] * 3, axis=-1) * 255
+                    img_rgb = img_rgb.astype(np.uint8)
+
+                    if t == T - 1:
+                        overlay = np.zeros_like(img_rgb)
+                        y_np = y[0].cpu().numpy()
+                        pred_np = pred[0].cpu().numpy()
+
+                        overlay[y_np > 0] = [0, 255, 0]   # Green GT
+                        overlay[pred_np > 0] = [255, 0, 0]  # Red prediction
+
+                        alpha = 0.4
+                        img_rgb = cv2.addWeighted(img_rgb, 1.0, overlay, alpha, 0)
+
+                    img_path = os.path.join(save_dir, f"frame_{idx:05d}.png")
+                    cv2.imwrite(img_path, img_rgb)
+                    frame_paths.append(img_path)
+                    idx += 1
+
+    # Combine into video
+    video_path = os.path.join(save_dir, "testset_video.mp4")
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    sample_img = cv2.imread(frame_paths[0])
+    height, width, _ = sample_img.shape
+    out = cv2.VideoWriter(video_path, fourcc, fps, (width, height))
+
+    for path in frame_paths:
+        frame = cv2.imread(path)
+        out.write(frame)
+    out.release()
+    print(f"✅ Saved test set video with {len(frame_paths)} frames to: {video_path}")
+
+    
 
 def visualize_weights(
     model: nn.Module, 

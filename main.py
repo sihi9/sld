@@ -11,7 +11,7 @@ from engine.trainer import train
 from engine.evaluator import run_final_evaluation_and_save
 
 
-from utils.visualizations import visualize_random_batch
+from utils.visualizations import visualize_random_batch, visualize_predictions_video
 from utils.config import load_config, get_device
 from utils.experiment import ExperimentManager
 
@@ -82,7 +82,17 @@ def main():
         model.to(device)
         model.eval()
 
-        visualize_random_batch(model, val_loader, device=cfg.train.device)
+
+        visualize_predictions_video(
+            model=model,
+            dataloader=test_loader,
+            device=device,
+            save_dir=f"outputs/{exp.exp_name}",
+            all_timesteps=False,  # or False if you only want final frame per sample
+            fps=15
+        )
+
+        #visualize_random_batch(model, val_loader, device=cfg.train.device)
         return  # Exit after evaluation
     
     # Optimizer & AMP
@@ -103,7 +113,7 @@ def main():
     # Final evaluation
     run_final_evaluation_and_save(
         model=model,
-        val_loader=val_loader,
+        val_loader=test_loader,
         optimizer=optimizer,
         scaler=scaler,
         device=device,
