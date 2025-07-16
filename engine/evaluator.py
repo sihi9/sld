@@ -35,7 +35,7 @@ def run_final_evaluation_and_save(
     print(f"Final Loss: {final_loss:.4f}, Final IoU: {final_iou:.4f}")
 
 
-    logger.save_checkpoint(name='checkpoint_final.pth',
+    logger.save_checkpoint(name='checkpoint_final',
                            model=model,
                            optimizer=optimizer,
                            scaler=scaler,

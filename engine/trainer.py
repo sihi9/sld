@@ -123,13 +123,13 @@ def train(model,
             print("🟢 New best model found!")
             # Save model checkpoint
             if save_intermediate:
-                logger.save_checkpoint(name=f"checkpoint_epoch_{epoch}.pth", 
+                logger.save_checkpoint(name=f"checkpoint_epoch_{epoch}", 
                                        model=model,
                                        optimizer=optimizer,
                                        scaler=scaler,
                                        epoch=epoch)
             else:
-                logger.save_checkpoint(name=f"checkpoint_latest.pth",
+                logger.save_checkpoint(name=f"checkpoint_latest",
                                        model=model,
                                        optimizer=optimizer,
                                        scaler=scaler,
