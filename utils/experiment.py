@@ -10,50 +10,6 @@ from utils.config import serialize_config_for_logging, namespace_to_dict
 from torchinfo import summary
 
 
-def create_experiment_dir(cfg: Any, args: Namespace, base_dir: str = "experiments") -> str:
-    """
-    Creates a structured experiment directory with subfolders for logs and checkpoints.
-    Saves config and arguments for reproducibility.
-
-    Returns:
-        str: Path to the root experiment directory.
-    """
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    exp_name = f"{cfg.model.name}_lr{cfg.train.lr}_{timestamp}"
-    exp_dir = os.path.join(base_dir, exp_name)
-
-    os.makedirs(os.path.join(exp_dir, "checkpoints"), exist_ok=True)
-    os.makedirs(os.path.join(exp_dir, "logs"), exist_ok=True)
-
-    # Save configuration
-    # Save merged flat config
-    config_path = os.path.join(exp_dir, "config.yaml")
-    with open(config_path, 'w') as f:
-        cfg_dict_raw = cfg.to_dict() if hasattr(cfg, "to_dict") else cfg
-        cfg_dict = namespace_to_dict(cfg_dict_raw)
-        yaml.dump(cfg_dict, f, default_flow_style=False)
-
-    # Save original profile configs for reproducibility
-    shutil.copy("configs/default.yaml", os.path.join(exp_dir, "default.yaml"))
-
-    model_key = args.model or cfg.model.name
-    data_key = args.data or cfg.data.loader
-
-    shutil.copy(f"configs/model/{model_key}.yaml", os.path.join(exp_dir, f"model_{model_key}.yaml"))
-    shutil.copy(f"configs/data/{data_key}.yaml", os.path.join(exp_dir, f"data_{data_key}.yaml"))
-
-
-    # Save CLI arguments
-    with open(os.path.join(exp_dir, "args.txt"), "w") as f:
-        f.write(str(args))
-
-    # Save run metadata
-    metadata = build_run_metadata(cfg)
-    with open(os.path.join(exp_dir, "run_info.txt"), "w") as f:
-        for k, v in metadata.items():
-            f.write(f"{k}: {v}\n")
-
-    return exp_dir
 
 
 def build_run_metadata(cfg: Any) -> Dict[str, Any]:
@@ -83,10 +39,15 @@ class ExperimentManager:
         self.cfg = cfg
         self.args = args
 
-        self.exp_dir: str = create_experiment_dir(cfg, args, base_dir)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.exp_name = f"{cfg.model.name}_lr{cfg.train.lr}_{timestamp}"
+        
+        self.exp_dir = os.path.join(base_dir, self.exp_name)        
         self.log_dir: str = os.path.join(self.exp_dir, "logs")
         self.checkpoint_dir: str = os.path.join(self.exp_dir, "checkpoints")
 
+        self._init_experiment_dir()
+        
         self.logger = SpikeLogger(
             log_dir=self.log_dir,
             checkpoint_dir=self.checkpoint_dir,
@@ -97,6 +58,46 @@ class ExperimentManager:
         self.log_run_metadata()
 
 
+
+    def _init_experiment_dir(self) -> str:
+        """
+        Creates a structured experiment directory with subfolders for logs and checkpoints.
+        Saves config and arguments for reproducibility.
+
+        Returns:
+            str: Path to the root experiment directory.
+        """
+        os.makedirs(os.path.join(self.exp_dir, "checkpoints"), exist_ok=True)
+        os.makedirs(os.path.join(self.exp_dir, "logs"), exist_ok=True)
+
+        # Save configuration
+        # Save merged flat config
+        config_path = os.path.join(self.exp_dir, "config.yaml")
+        with open(config_path, 'w') as f:
+            cfg_dict_raw = self.cfg.to_dict() if hasattr(self.cfg, "to_dict") else self.cfg
+            cfg_dict = namespace_to_dict(cfg_dict_raw)
+            yaml.dump(cfg_dict, f, default_flow_style=False)
+
+        # Save original profile configs for reproducibility
+        shutil.copy("configs/default.yaml", os.path.join(self.exp_dir, "default.yaml"))
+
+        model_key = self.args.model or self.cfg.model.name
+        data_key = self.args.data or self.cfg.data.loader
+
+        shutil.copy(f"configs/model/{model_key}.yaml", os.path.join(self.exp_dir, f"model_{model_key}.yaml"))
+        shutil.copy(f"configs/data/{data_key}.yaml", os.path.join(self.exp_dir, f"data_{data_key}.yaml"))
+
+
+        # Save CLI arguments
+        with open(os.path.join(self.exp_dir, "args.txt"), "w") as f:
+            f.write(str(self.args))
+
+        # Save run metadata
+        metadata = build_run_metadata(self.cfg)
+        with open(os.path.join(self.exp_dir, "run_info.txt"), "w") as f:
+            for k, v in metadata.items():
+                f.write(f"{k}: {v}\n")
+    
     def _log_config_to_tensorboard(self) -> None:
         """
         Logs the combined config and args to TensorBoard as YAML-formatted text.

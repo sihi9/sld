@@ -24,7 +24,6 @@ def _downscale_label(img: np.ndarray, factor: int) -> np.ndarray:
     if factor == 1:
         return img
     
-   
     H, W = img.shape
     H2, W2 = H // factor, W // factor
     # Problem are disappearing labels, workaround is to use area interpolation
@@ -173,7 +172,7 @@ def build_det_dataloaders(batch_size=4,
                           train_split=0.8,
                           seed=42,
                           shuffle=True,
-                          test_file='20190222_1707_T30_x4.h5',
+                          test_file='20190217_1156_T30_x4.h5',
                           data_dir='./data/DET/'):
     all_files = [f for f in os.listdir(data_dir) if f.endswith('.h5')]
     train_val_files = [f for f in all_files if f != test_file]
@@ -268,7 +267,7 @@ def plot_sample_sequence(inputs, labels, history=10, save_path=None, show=True):
 # Example usage guard
 if __name__ == '__main__':
     # Quick test
-    loader = build_det_dataloaders(downscale_factor=1, shuffle=False)["train"]
+    loader = build_det_dataloaders(downscale_factor=4, shuffle=False)["train"]
     
     for x, y in loader:
         print("Input:", x.shape)  
