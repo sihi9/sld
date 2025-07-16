@@ -1,4 +1,5 @@
 import argparse
+import os
 import torch
 from torch import optim
 from torch.amp import GradScaler
@@ -18,7 +19,10 @@ from utils.experiment import ExperimentManager
 
 def main():
     args = parse_args()
-    cfg = load_config(model=args.model, data=args.data, overrides=args, resume_path=args.resume_from)
+    
+    resume_path = f"experiments/{args.experiment_name}" if args.experiment_name else None
+    cfg = load_config(model=args.model, data=args.data, overrides=args, resume_path=resume_path)
+    
 
     device = get_device()
     print(f"Running on {device} | AMP: {'Enabled' if cfg.train.amp else 'Disabled'}")
@@ -75,21 +79,37 @@ def main():
     # if cfg.log.vis_interval > 0:    # todo: find a way that doesnt need v_monitor
     #     exp.log_neuron_counts(model, input_shape=(T, B, C_in, H_in, W_in))
     
-    # Load pretrained weights if available
-    if args.eval_checkpoint:
-        print(f"Running evaluation on {args.eval_checkpoint}...")
-        model.load_state_dict(torch.load(args.eval_checkpoint, map_location=device, weights_only=True))
-        model.to(device)
-        model.eval()
+   
 
+    if resume_path:
+        checkpoint_filename = {
+            "final": "checkpoint_final.pth",
+            "best": "checkpoint_best.pth",
+            "last": "checkpoint_last.pth"
+        }[args.checkpoint_type]
+
+        checkpoint_path = os.path.join(resume_path, "checkpoints", checkpoint_filename)
+        
+        # Load pretrained weights if available
+        print(f"Resuming from experiment: {args.experiment_name}")
+        checkpoint = torch.load(checkpoint_path, map_location=device)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        model.to(device)
+        
+      
+    
+
+    if args.eval_only:
+        print(f"Running evaluation only")
+        model.eval()
 
         visualize_predictions_video(
             model=model,
             dataloader=test_loader,
             device=device,
-            save_dir=f"outputs/{exp.exp_name}",
-            all_timesteps=False,  # or False if you only want final frame per sample
-            fps=15
+            save_dir=f"outputs/{args.experiment_name}",
+            all_timesteps=False,
+            fps=0.5
         )
 
         #visualize_random_batch(model, val_loader, device=cfg.train.device)
@@ -128,27 +148,23 @@ def main():
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--eval-checkpoint',
-        nargs='?',
-        const='checkpoints/checkpoint_final.pth',
-        default=None,
-        help='Path to checkpoint to evaluate. Use without a value to default to checkpoints/checkpoint_final.pth'
-    )
-    
-     # Named config blocks
+
     parser.add_argument('--model', choices=["base", "unet"], help='Model profile name')
     parser.add_argument('--data', choices=["demo", "det"], help='Data profile name')
 
-    # Specific overrides
+    # CLI overrides
     parser.add_argument('--lr', type=float, dest='train_lr', help='Override training learning rate')
     parser.add_argument('--hidden_dim', type=int, dest='model_hidden_dim', help='Override model hidden dim')
 
-    # Rerun mode
-    parser.add_argument('--resume-from', type=str, help='Path to previous experiment folder to rerun')
+    parser.add_argument('--experiment-name', type=str, help='Name of experiment to resume/evaluate')
+    parser.add_argument('--eval-only', action='store_true', help='If set, only run evaluation on given experiment')
+
+    parser.add_argument(
+    "--checkpoint-type", type=str, choices=["final", "best", "last"], default="final",
+    help="Which checkpoint to evaluate: final (default), best (based on val_iou), or last (latest epoch)"
+)
     
     return parser.parse_args()
-
 
 if __name__ == '__main__':
     main()

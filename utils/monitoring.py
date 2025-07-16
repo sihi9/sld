@@ -39,6 +39,25 @@ class SpikeLogger:
         :param bins: Number of bins for the histogram.
         """
         self.writer.add_histogram(tag, values, step, bins=bins)
+        
+    def save_checkpoint(self, name, model, optimizer=None, scaler=None, epoch=None, metrics=None):
+        checkpoint = {
+            "model_state_dict": model.state_dict(),
+        }
+        
+        path = os.path.join(self.checkpoint_dir, f"{name}.pth")
+        
+        if optimizer:
+            checkpoint["optimizer_state_dict"] = optimizer.state_dict()
+        if scaler:
+            checkpoint["scaler_state_dict"] = scaler.state_dict()
+        if epoch is not None:
+            checkpoint["epoch"] = epoch
+        if metrics:
+            checkpoint.update(metrics)
+
+        torch.save(checkpoint, path)
+        print(f"Checkpoint saved to {path}")
 
 
 def log_from_monitors(model, logger: SpikeLogger, epoch: int):

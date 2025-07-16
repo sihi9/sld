@@ -6,8 +6,6 @@ from typing import Any, Dict, Union
 import torch
 
 def load_config(path="configs/default.yaml", model=None, data=None, overrides=None, resume_path=None):
-    
-    
     if resume_path:
         # Load flat snapshot config
         resume_config_path = os.path.join(resume_path, "config.yaml")

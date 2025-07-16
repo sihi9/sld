@@ -123,6 +123,7 @@ def visualize_predictions_video(
         fps: Video FPS
         threshold: Output threshold for binary prediction
     """
+    print("🔍 Generating test set video...")
     os.makedirs(save_dir, exist_ok=True)
     model.eval()
     frame_paths = []
@@ -147,17 +148,42 @@ def visualize_predictions_video(
                     img = x[t, 0].cpu().numpy()
                     img_rgb = np.stack([img] * 3, axis=-1) * 255
                     img_rgb = img_rgb.astype(np.uint8)
-
+                    
                     if t == T - 1:
-                        overlay = np.zeros_like(img_rgb)
-                        y_np = y[0].cpu().numpy()
-                        pred_np = pred[0].cpu().numpy()
+                        # Get binary masks
+                        y_np = y[0].cpu().numpy().astype(bool)
+                        pred_np = pred[0].cpu().numpy().astype(bool)
 
-                        overlay[y_np > 0] = [0, 255, 0]   # Green GT
-                        overlay[pred_np > 0] = [255, 0, 0]  # Red prediction
+                        # Convert grayscale image to BGR and normalize to [0, 1]
+                        img_rgb = np.stack([img, img, img], axis=-1).astype(np.float32)
+                        img_rgb /= 255.0 if img_rgb.max() > 1.0 else 1.0
+
+                        # Define colors in BGR (OpenCV format)
+                        green  = np.array([0.0, 1.0, 0.0])  # GT only
+                        red    = np.array([0.0, 0.0, 1.0])  # Prediction only
+                        yellow = np.array([0.0, 1.0, 1.0])  # Overlap (GT & prediction)
 
                         alpha = 0.4
-                        img_rgb = cv2.addWeighted(img_rgb, 1.0, overlay, alpha, 0)
+
+                        # Create overlay map
+                        overlay = np.zeros_like(img_rgb)
+
+                        gt_only = y_np & ~pred_np
+                        pred_only = pred_np & ~y_np
+                        overlap = y_np & pred_np
+
+                        overlay[gt_only] = green
+                        overlay[pred_only] = red
+                        overlay[overlap] = yellow
+
+                        mask = gt_only | pred_only | overlap
+                        mask3 = np.repeat(mask[:, :, np.newaxis], 3, axis=2)
+
+                        # Alpha blend
+                        img_rgb[mask3] = (1 - alpha) * img_rgb[mask3] + alpha * overlay[mask3]
+
+                        # Convert back to uint8
+                        img_rgb = (img_rgb * 255).clip(0, 255).astype(np.uint8)
 
                     img_path = os.path.join(save_dir, f"frame_{idx:05d}.png")
                     cv2.imwrite(img_path, img_rgb)
@@ -165,8 +191,8 @@ def visualize_predictions_video(
                     idx += 1
 
     # Combine into video
-    video_path = os.path.join(save_dir, "testset_video.mp4")
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    fourcc = cv2.VideoWriter_fourcc(*'I420')  # Or 'FFV1' for truly lossless
+    video_path = os.path.join(save_dir, "testset_video.avi")
     sample_img = cv2.imread(frame_paths[0])
     height, width, _ = sample_img.shape
     out = cv2.VideoWriter(video_path, fourcc, fps, (width, height))
