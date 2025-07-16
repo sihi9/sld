@@ -29,6 +29,16 @@ class SpikeLogger:
 
     def log_text(self, tag, text_string, step=0):
         self.writer.add_text(tag, text_string, step)
+        
+    def log_histogram(self, tag, values, step=0, bins=100):
+        """
+        Logs a histogram of the given values.
+        :param tag: Name of the histogram in TensorBoard.
+        :param values: Values to log.
+        :param step: Global step value to record.
+        :param bins: Number of bins for the histogram.
+        """
+        self.writer.add_histogram(tag, values, step, bins=bins)
 
 
 def log_from_monitors(model, logger: SpikeLogger, epoch: int):

@@ -77,6 +77,7 @@ def train(model,
             # log last batch
             if logger is not None and total_batches == len(train_loader) - 1:                
                 log_from_monitors(model, logger, epoch)
+                logger.log_histogram("PredProbs/Train", outputs, epoch) # log last batch predictions to see if conficence rises
             
             functional.reset_net(model)
             
