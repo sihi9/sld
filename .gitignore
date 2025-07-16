@@ -46,7 +46,7 @@ build/
 *.zip
 
 # IDE specific files
-.vscode/
+#.vscode/
 .idea/
 *.sublime-workspace
 *.sublime-project
