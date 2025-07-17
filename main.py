@@ -79,8 +79,6 @@ def main():
     # if cfg.log.vis_interval > 0:    # todo: find a way that doesnt need v_monitor
     #     exp.log_neuron_counts(model, input_shape=(T, B, C_in, H_in, W_in))
     
-   
-
     if resume_path:
         checkpoint_filename = {
             "final": "checkpoint_final.pth",
@@ -95,9 +93,6 @@ def main():
         checkpoint = torch.load(checkpoint_path, map_location=device)
         model.load_state_dict(checkpoint["model_state_dict"])
         model.to(device)
-        
-      
-    
 
     if args.eval_only:
         print(f"Running evaluation only")
@@ -109,9 +104,8 @@ def main():
             device=device,
             save_dir=f"outputs/{args.experiment_name}",
             all_timesteps=False,
-            fps=0.5
+            fps=1
         )
-
         #visualize_random_batch(model, val_loader, device=cfg.train.device)
         return  # Exit after evaluation
     
@@ -129,7 +123,6 @@ def main():
           logger=logger,
           save_intermediate=cfg.train.save_intermediate,)
 
-
     # Final evaluation
     run_final_evaluation_and_save(
         model=model,
@@ -139,7 +132,7 @@ def main():
         device=device,
         amp=cfg.train.amp,
         epochs=cfg.train.epochs,
-        checkpoint_dir=logger.checkpoint_dir
+        logger=logger
     )
         
     visualize_random_batch(model, test_loader, device=device, logger=logger, step=cfg.train.epochs)
@@ -162,7 +155,7 @@ def parse_args():
     parser.add_argument(
     "--checkpoint-type", type=str, choices=["final", "best", "last"], default="final",
     help="Which checkpoint to evaluate: final (default), best (based on val_iou), or last (latest epoch)"
-)
+    )
     
     return parser.parse_args()
 

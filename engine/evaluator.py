@@ -39,7 +39,7 @@ def run_final_evaluation_and_save(
                            model=model,
                            optimizer=optimizer,
                            scaler=scaler,
-                           epochs=epochs,
+                           epoch=epochs,
                            metrics={"final_iou": final_iou, "final_loss": final_loss},)
 
 
