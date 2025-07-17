@@ -47,6 +47,7 @@ build/
 
 # IDE specific files
 #.vscode/
+.vscode/settings.json
 .idea/
 *.sublime-workspace
 *.sublime-project

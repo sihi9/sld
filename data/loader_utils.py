@@ -54,6 +54,7 @@ class DataModule:
                 num_workers=data_cfg.num_workers,
                 downscale_factor=data_cfg.downscale,
                 used_T=data_cfg.used_T,
+                use_static=data_cfg.use_static,
                 train_split=0.8  # or expose as cfg parameter
             )
 

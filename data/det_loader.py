@@ -48,12 +48,22 @@ class HDF5Dataset(Dataset):
                  h5_path: str,
                  downscale_factor: int = 1,
                  filter_fn=None,
-                 used_T = None):
+                 used_T = None,
+                 use_static=False):
+        """
+        Initialize the dataset.
+        Args:            h5_path: Path to the HDF5 file.
+            downscale_factor: Factor by which to downscale the frames and labels.
+            filter_fn: Optional function to filter samples based on input and label.
+            used_T: If specified, only the last `used_T` frames will  be used.
+            use_static: If True, will only use last frame.
+        """
         path_prefix = './data/DET/'  # Assuming data files are in a 'data' directory
         self.h5_path = path_prefix + h5_path
         self.downscale_factor = downscale_factor
         self.filter_fn = filter_fn
         self.used_T = used_T
+        self.use_static = use_static
         
         # Open in read-only mode
         self._h5 = h5py.File(self.h5_path, 'r')
@@ -92,10 +102,19 @@ class HDF5Dataset(Dataset):
         # Process frames
         
         frames = []
-        for t in range(T):
-            img = x_np[t, 0, :, :].astype(np.uint8)
+        
+        if self.use_static:
+            # Use last frame only, repeated T times
+            img = x_np[-1, 0, :, :].astype(np.uint8)
             img_ds = _downscale_frame(img, self.downscale_factor)
-            frames.append(img_ds)
+            frames = [img_ds for _ in range(T)]
+        else:
+            for t in range(T):
+                img = x_np[t, 0, :, :].astype(np.uint8)
+                img_ds = _downscale_frame(img, self.downscale_factor)
+                frames.append(img_ds)
+        
+        
         x_ds = np.stack(frames, axis=0)  # (T,H2,W2)
         x_ds = x_ds[:, np.newaxis, :, :]  # (T,1,H2,W2)
 
@@ -143,12 +162,27 @@ class HDF5Dataset(Dataset):
             pass
 
 class MultiHDF5Dataset(Dataset):
-    def __init__(self, h5_paths, downscale_factor=1, filter_fn=None, used_T=None):
+    def __init__(self, 
+                 h5_paths, 
+                 downscale_factor=1, 
+                 filter_fn=None, 
+                 used_T=None,
+                 use_static=False):
+        """
+        Dataset that combines multiple HDF5 files.
+        Args:
+            h5_paths: List of paths to HDF5 files.
+            downscale_factor: Factor by which to downscale the frames and labels.
+            filter_fn: Optional function to filter samples based on input and label.
+            used_T: If specified, only the last `used_T` frames will be used.
+            use_static: If True, will only use last frame.
+        """
         self.datasets = [
             HDF5Dataset(h5_path=path,
                         downscale_factor=downscale_factor,
                         filter_fn=filter_fn,
-                        used_T=used_T)
+                        used_T=used_T,
+                        use_static=use_static)
             for path in h5_paths
         ]
         self.cumulative_lengths = np.cumsum([len(ds) for ds in self.datasets])
@@ -169,6 +203,7 @@ def build_det_dataloaders(batch_size=4,
                           num_workers=0, 
                           downscale_factor=1,
                           used_T=None,
+                          use_static=False,
                           train_split=0.8,
                           seed=42,
                           shuffle=True,
@@ -181,7 +216,8 @@ def build_det_dataloaders(batch_size=4,
     dataset = MultiHDF5Dataset(
         h5_paths=train_val_files,
         downscale_factor=downscale_factor,
-        used_T=used_T
+        used_T=used_T,
+        use_static=use_static
     )
 
     total_size = len(dataset)
@@ -194,7 +230,8 @@ def build_det_dataloaders(batch_size=4,
     test_dataset = HDF5Dataset(
         h5_path=test_file,
         downscale_factor=downscale_factor,
-        used_T=used_T
+        used_T=used_T,
+        use_static=use_static
     )
 
     return {
