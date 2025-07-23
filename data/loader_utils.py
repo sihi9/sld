@@ -1,5 +1,6 @@
 from data.demo_loader import build_demo_dataloader
 from data.det_loader  import build_det_dataloaders
+from data.carla_loader import build_carla_dataloaders
 
 class DataModule:
     def __init__(self, cfg):
@@ -57,7 +58,7 @@ class DataModule:
             )
         elif data_cfg.loader == "carla":
             # use the real CARLA loader
-            return build_det_dataloaders(
+            return build_carla_dataloaders(
                 batch_size=data_cfg.batch_size,
                 num_workers=data_cfg.num_workers,
                 downscale_factor=data_cfg.downscale,

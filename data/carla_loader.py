@@ -58,7 +58,7 @@ class HDF5Dataset(Dataset):
             used_T: If specified, only the last `used_T` frames will  be used.
             use_static: If True, will only use last frame.
         """
-        path_prefix = './data/DET/'  # Assuming data files are in a 'data' directory
+        path_prefix = './data/CARLA/'
         self.h5_path = path_prefix + h5_path
         self.downscale_factor = downscale_factor
         self.filter_fn = filter_fn
@@ -69,7 +69,6 @@ class HDF5Dataset(Dataset):
         self._h5 = h5py.File(self.h5_path, 'r')
         self._X = self._h5['X']
         self._Y = self._h5['Y']
-        self._snapshot_idx = self._h5['snapshot_idx']
         # Build index list
         self.indices = list(range(self._X.shape[0]))
 
@@ -199,7 +198,7 @@ class MultiHDF5Dataset(Dataset):
         for ds in self.datasets:
             ds.close()
             
-def build_det_dataloaders(batch_size=4, 
+def build_carla_dataloaders(batch_size=4, 
                           num_workers=0, 
                           downscale_factor=1,
                           used_T=None,
@@ -208,7 +207,7 @@ def build_det_dataloaders(batch_size=4,
                           seed=42,
                           shuffle=True,
                           test_file='dataset_Town04_2000_T30_x4.h5',
-                          data_dir='./data/DET/'):
+                          data_dir='./data/CARLA/'):
     all_files = [f for f in os.listdir(data_dir) if f.endswith('.h5')]
     train_val_files = [f for f in all_files if f != test_file or True] # todo: remove this to get correct split
 
@@ -304,7 +303,7 @@ def plot_sample_sequence(inputs, labels, history=10, save_path=None, show=True):
 # Example usage guard
 if __name__ == '__main__':
     # Quick test
-    loader = build_det_dataloaders(downscale_factor=4, shuffle=False)["train"]
+    loader = build_carla_dataloaders(downscale_factor=4, shuffle=False)["train"]
     
     for x, y in loader:
         print("Input:", x.shape)  
