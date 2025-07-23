@@ -47,15 +47,23 @@ class DataModule:
 
         elif data_cfg.loader == "det":
             # use the real DET loader
-            # here we simply instantiate train and val on the full dataset
-            # (if you want a split, you can wrap the Dataset yourself)
             return build_det_dataloaders(
                 batch_size=data_cfg.batch_size,
                 num_workers=data_cfg.num_workers,
                 downscale_factor=data_cfg.downscale,
                 used_T=data_cfg.used_T,
                 use_static=data_cfg.use_static,
-                train_split=0.8  # or expose as cfg parameter
+                train_split=0.8 
+            )
+        elif data_cfg.loader == "carla":
+            # use the real CARLA loader
+            return build_det_dataloaders(
+                batch_size=data_cfg.batch_size,
+                num_workers=data_cfg.num_workers,
+                downscale_factor=data_cfg.downscale,
+                used_T=data_cfg.used_T,
+                use_static=data_cfg.use_static,
+                train_split=0.8 
             )
 
         else:

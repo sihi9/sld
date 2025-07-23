@@ -1,6 +1,6 @@
 name: unet
-features: [16, 32]
-hidden_dim: 1024 
+features: [16, 32, 64]
+hidden_dim: 512
 recurrent: true
 output_timesteps: 1
 use_plif_encoder: false

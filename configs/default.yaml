@@ -1,12 +1,12 @@
 description: >
-  Recurrent UNet training configuration with 10 timesteps and high pos weight scaling
+  Recurrent bigger UNet training to compare with static
 
 defaults:
   model: unet # base or unet
-  data: det   # det or demo
+  data: carla   # det, carla or demo
 
 train:
-  epochs: 10
+  epochs: 100
   lr: 0.001
   amp: false
   device: auto
