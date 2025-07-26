@@ -1,6 +1,6 @@
 loader: det
 batch_size: 16
-num_workers: 2
+num_workers: 4
 downscale: 4 
 used_T: 30
 use_static: false

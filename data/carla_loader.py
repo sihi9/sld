@@ -303,22 +303,26 @@ def plot_sample_sequence(inputs, labels, history=10, save_path=None, show=True):
         
 def test_time():
     import time
-    loader = build_carla_dataloaders(num_workers=4, downscale_factor=4, shuffle=False)["train"]
+    loader = build_carla_dataloaders(num_workers=2, downscale_factor=4, shuffle=False)["train"]
 
     start = time.time()
+    iterations = 500
     for i, (x, y) in enumerate(loader):
-        print(f"Batch {i}: Input {x.shape}, Label {y.shape}")
-        break
-    print("Time to load 1 batch:", time.time() - start)
+        if i >= iterations:
+            break
+    end = time.time()
+    elapsed = end - start
+    print(f"Time for {iterations} batches: {elapsed:.2f} seconds")
+    print(f"Average time per batch: {elapsed / iterations:.2f} seconds")
 
 # Example usage guard
 if __name__ == '__main__':
     # Quick test
-    test_time()
-    # loader = build_carla_dataloaders(downscale_factor=4, shuffle=False)["train"]
+    # test_time()
+    loader = build_carla_dataloaders(downscale_factor=4, shuffle=False)["train"]
     
-    # for x, y in loader:
-    #     print("Input:", x.shape)  
-    #     print("Label:", y.shape)
-    #     plot_sample_sequence(x, y, history=1)
-    #     break
+    for x, y in loader:
+        print("Input:", x.shape)  
+        print("Label:", y.shape)
+        plot_sample_sequence(x, y, history=1)
+        break
