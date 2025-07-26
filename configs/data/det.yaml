@@ -4,3 +4,7 @@ num_workers: 4
 downscale: 4 
 used_T: 30
 use_static: false
+label_smoothing:
+    enabled: false
+    background: 0.05
+    lane: 0.95

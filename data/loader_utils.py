@@ -54,6 +54,9 @@ class DataModule:
                 downscale_factor=data_cfg.downscale,
                 used_T=data_cfg.used_T,
                 use_static=data_cfg.use_static,
+                label_smoothing_enabled=data_cfg.label_smoothing.enabled,
+                smooth_bg=data_cfg.label_smoothing.background,
+                smooth_lane=data_cfg.label_smoothing.lane,
                 train_split=0.8 
             )
         elif data_cfg.loader == "carla":
@@ -69,3 +72,4 @@ class DataModule:
 
         else:
             raise ValueError(f"Unknown data.loader: {data_cfg.loader}")
+

@@ -6,6 +6,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from .data_utils import apply_label_smoothing
 
 def _downscale_frame(img: np.ndarray, factor: int) -> np.ndarray:
     """Downscale binary frame (0/255) with area then threshold to preserve binary."""
@@ -49,7 +50,10 @@ class HDF5Dataset(Dataset):
                  downscale_factor: int = 1,
                  filter_fn=None,
                  used_T = None,
-                 use_static=False):
+                 use_static=False,
+                 label_smoothing_enabled=False,
+                 smooth_bg=0.05,
+                 smooth_lane=0.95):
         """
         Initialize the dataset.
         Args:            h5_path: Path to the HDF5 file.
@@ -57,6 +61,9 @@ class HDF5Dataset(Dataset):
             filter_fn: Optional function to filter samples based on input and label.
             used_T: If specified, only the last `used_T` frames will  be used.
             use_static: If True, will only use last frame.
+            label_smoothing_enabled: If True, will apply label smoothing.
+            smooth_bg: Background label smoothing value.
+            smooth_lane: Lane label smoothing value.
         """
         path_prefix = './data/DET/'  # Assuming data files are in a 'data' directory
         self.h5_path = path_prefix + h5_path
@@ -64,6 +71,9 @@ class HDF5Dataset(Dataset):
         self.filter_fn = filter_fn
         self.used_T = used_T
         self.use_static = use_static
+        self.label_smoothing_enabled = label_smoothing_enabled
+        self.smooth_bg = smooth_bg
+        self.smooth_lane = smooth_lane
         
         # Open in read-only mode
         self._h5 = h5py.File(self.h5_path, 'r')
@@ -100,7 +110,6 @@ class HDF5Dataset(Dataset):
             T = self.used_T
     
         # Process frames
-        
         frames = []
         
         if self.use_static:
@@ -143,7 +152,9 @@ class HDF5Dataset(Dataset):
             lab_ds = lab_ds[:,
                             crop_top : H2,
                             crop_left: W2 - crop_right]
-            
+        
+        if self.label_smoothing_enabled:
+            lab_ds = apply_label_smoothing(lab_ds, self.smooth_bg, self.smooth_lane)
         
         # Convert to torch.Tensor
         x_tensor = torch.from_numpy(x_ds).float() / 255.0
@@ -167,7 +178,10 @@ class MultiHDF5Dataset(Dataset):
                  downscale_factor=1, 
                  filter_fn=None, 
                  used_T=None,
-                 use_static=False):
+                 use_static=False,
+                 label_smoothing_enabled=False,
+                 smooth_bg=0.05,
+                 smooth_lane=0.95):
         """
         Dataset that combines multiple HDF5 files.
         Args:
@@ -176,13 +190,19 @@ class MultiHDF5Dataset(Dataset):
             filter_fn: Optional function to filter samples based on input and label.
             used_T: If specified, only the last `used_T` frames will be used.
             use_static: If True, will only use last frame.
+            label_smoothing_enabled: If True, will apply label smoothing.
+            smooth_bg: Background label smoothing value.
+            smooth_lane: Lane label smoothing value.
         """
         self.datasets = [
             HDF5Dataset(h5_path=path,
                         downscale_factor=downscale_factor,
                         filter_fn=filter_fn,
                         used_T=used_T,
-                        use_static=use_static)
+                        use_static=use_static,
+                        label_smoothing_enabled=label_smoothing_enabled,
+                        smooth_bg=smooth_bg,
+                        smooth_lane=smooth_lane)
             for path in h5_paths
         ]
         self.cumulative_lengths = np.cumsum([len(ds) for ds in self.datasets])
@@ -204,11 +224,33 @@ def build_det_dataloaders(batch_size=4,
                           downscale_factor=1,
                           used_T=None,
                           use_static=False,
+                          label_smoothing_enabled=False,
+                          smooth_bg=0.05,
+                          smooth_lane=0.95,
                           train_split=0.8,
                           seed=42,
                           shuffle=True,
                           test_file='20190217_1156_T30_x4.h5',
                           data_dir='./data/DET/'):
+    """
+    Build DataLoader for DET dataset.
+    Args:
+        batch_size: Batch size for DataLoader.
+        num_workers: Number of workers for DataLoader.
+        downscale_factor: Factor by which to downscale the frames and labels.
+        used_T: If specified, only the last `used_T` frames will be used.
+        use_static: If True, will only use last frame.
+        label_smoothing_enabled: If True, will apply label smoothing.
+        smooth_bg: Background label smoothing value.
+        smooth_lane: Lane label smoothing value.
+        train_split: Fraction of data to use for training (0.8 means 80% train, 20% val).
+        seed: Random seed for reproducibility.
+        shuffle: Whether to shuffle the training data.
+        test_file: Name of the file used for testing.
+        data_dir: Directory where the data files are located.
+    Returns:
+        Dictionary with 'train', 'val', and 'test' DataLoaders.
+    """
     all_files = [f for f in os.listdir(data_dir) if f.endswith('.h5')]
     train_val_files = [f for f in all_files if f != test_file]
 
@@ -217,7 +259,10 @@ def build_det_dataloaders(batch_size=4,
         h5_paths=train_val_files,
         downscale_factor=downscale_factor,
         used_T=used_T,
-        use_static=use_static
+        use_static=use_static,
+        label_smoothing_enabled=label_smoothing_enabled,
+        smooth_bg=smooth_bg,
+        smooth_lane=smooth_lane,
     )
 
     total_size = len(dataset)
@@ -250,16 +295,13 @@ def plot_sample_sequence(inputs, labels, history=10, save_path=None, show=True):
         save_path: Path to save the figure, if None, will not save
         show: If True, will show the figure, otherwise will just close it
     """
-
     # Squeeze channel dimension
-     
     x_seq = inputs[0, :, 0, :, :]   
     y = labels[0, 0, :, :]
     # Create boolean mask for label overlay
     mask = (y != 0)
 
     T = x_seq.shape[0]
-
     
     if T > history:
         seq = x_seq[-history:]

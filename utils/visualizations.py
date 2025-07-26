@@ -69,7 +69,6 @@ def visualize_batch_predictions(
     else:
         plt.show()
     
-
 def create_overlay_image(
     input_img: np.ndarray,
     label_img: np.ndarray,
@@ -77,23 +76,24 @@ def create_overlay_image(
     alpha: float = 0.4
 ) -> np.ndarray:
     """
-    Creates an overlay image where:
-    - Green: ground truth only
-    - Red: prediction only
-    - Yellow: both GT and prediction
+    Overlays prediction and ground truth on a grayscale input image.
+    Green: GT only, Red: Prediction only, Yellow: both
     """
+    # Ensure input image is in [0, 1]
     input_img = input_img.astype(np.float32)
     if input_img.max() > 1.0:
         input_img /= 255.0
 
-    input_rgb = np.stack([input_img] * 3, axis=-1)
+    input_rgb = np.stack([input_img] * 3, axis=-1)  # shape (H, W, 3)
 
-    y_mask = label_img.astype(bool)
-    p_mask = pred_img.astype(bool)
+    # Binary masks
+    y_mask = label_img > 0.5
+    p_mask = pred_img > 0.5
 
+    # Overlay colors in RGB
     green = np.array([0.0, 1.0, 0.0])
-    red = np.array([0.0, 0.0, 1.0])
-    yellow = np.array([0.0, 1.0, 1.0])
+    red = np.array([1.0, 0.0, 0.0])
+    yellow = np.array([1.0, 1.0, 0.0])
 
     overlay = np.zeros_like(input_rgb)
     overlay[y_mask & ~p_mask] = green
@@ -103,17 +103,24 @@ def create_overlay_image(
     mask = y_mask | p_mask
     mask3 = np.repeat(mask[:, :, np.newaxis], 3, axis=2)
 
+    # Alpha blend
     blended = input_rgb.copy()
     blended[mask3] = (1 - alpha) * blended[mask3] + alpha * overlay[mask3]
-    return (blended * 255).astype(np.uint8)
+
+    # Convert to uint8 for display
+    return (blended * 255).clip(0, 255).astype(np.uint8)
 
 
-def show_sample_triplet(input_seq, output_seq, label_seq, n=3, figsize=(8, 8), cmap='gray', overlay=True):
+def show_sample_triplet(input_seq, output_seq, label_seq, n=3, figsize=(6, 2.5)):
     """
-    Plot one triplet of input / output / label frames.
-    If overlay=True, show overlay in center column.
+    Shows n samples, each as a single image:
+    - Background: last input frame
+    - Overlay: prediction and ground truth mask
+    
+    Returns:
+        fig: Matplotlib Figure object
     """
-    fig, axs = plt.subplots(n, 3, figsize=figsize)
+    fig, axs = plt.subplots(n, 1, figsize=(figsize[0], figsize[1] * n))
     axs = axs if n > 1 else [axs]
 
     for i in range(n):
@@ -121,26 +128,15 @@ def show_sample_triplet(input_seq, output_seq, label_seq, n=3, figsize=(8, 8), c
         pred_img = output_seq[i, 0].detach().cpu().numpy()
         label_img = label_seq[i, 0].cpu().numpy()
 
-        axs[i][0].imshow(input_img, cmap=cmap)
-        axs[i][0].set_title(f"Input #{i}")
-        axs[i][0].axis("off")
+        overlay_img = create_overlay_image(input_img, label_img, pred_img)
 
-        if overlay:
-            overlay_img = create_overlay_image(input_img, label_img, pred_img)
-            axs[i][1].imshow(overlay_img)
-            axs[i][1].set_title("Prediction Overlay")
-        else:
-            axs[i][1].imshow(pred_img, cmap=cmap)
-            axs[i][1].set_title("Predicted")
-
-        axs[i][1].axis("off")
-
-        axs[i][2].imshow(label_img, cmap=cmap)
-        axs[i][2].set_title("Ground Truth")
-        axs[i][2].axis("off")
+        axs[i].imshow(overlay_img)
+        axs[i].set_title(f"Sample #{i}")
+        axs[i].axis("off")
 
     plt.tight_layout()
     return fig
+
 
 
 

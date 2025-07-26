@@ -6,11 +6,11 @@ defaults:
   data: carla   # det, carla or demo
 
 train:
-  epochs: 100
+  epochs: 5
   lr: 0.001
   amp: false
   device: auto
   save_intermediate: false
 
 log:
-  vis_interval: 30
+  vis_interval: 5
