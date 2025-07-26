@@ -50,8 +50,6 @@ class SpikingUNetRNN(nn.Module):
         bottom_W = W // (2 ** depth)
         
         print(f"Input size: {input_size}, downscaling factor: {downscaling_factor}")
-       
-
 
         # Encoder path
         self.encoders = nn.ModuleList()

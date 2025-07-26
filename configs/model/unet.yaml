@@ -1,5 +1,5 @@
 name: unet
-features: [16, 32, 64]
+features: [16, 32]
 hidden_dim: 512
 recurrent: true
 output_timesteps: 1

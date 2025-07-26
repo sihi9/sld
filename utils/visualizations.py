@@ -70,34 +70,78 @@ def visualize_batch_predictions(
         plt.show()
     
 
-def show_sample_triplet(input_seq, output_seq, label_seq, n=3, figsize=(8, 8), cmap='gray'):
+def create_overlay_image(
+    input_img: np.ndarray,
+    label_img: np.ndarray,
+    pred_img: np.ndarray,
+    alpha: float = 0.4
+) -> np.ndarray:
+    """
+    Creates an overlay image where:
+    - Green: ground truth only
+    - Red: prediction only
+    - Yellow: both GT and prediction
+    """
+    input_img = input_img.astype(np.float32)
+    if input_img.max() > 1.0:
+        input_img /= 255.0
+
+    input_rgb = np.stack([input_img] * 3, axis=-1)
+
+    y_mask = label_img.astype(bool)
+    p_mask = pred_img.astype(bool)
+
+    green = np.array([0.0, 1.0, 0.0])
+    red = np.array([0.0, 0.0, 1.0])
+    yellow = np.array([0.0, 1.0, 1.0])
+
+    overlay = np.zeros_like(input_rgb)
+    overlay[y_mask & ~p_mask] = green
+    overlay[~y_mask & p_mask] = red
+    overlay[y_mask & p_mask] = yellow
+
+    mask = y_mask | p_mask
+    mask3 = np.repeat(mask[:, :, np.newaxis], 3, axis=2)
+
+    blended = input_rgb.copy()
+    blended[mask3] = (1 - alpha) * blended[mask3] + alpha * overlay[mask3]
+    return (blended * 255).astype(np.uint8)
+
+
+def show_sample_triplet(input_seq, output_seq, label_seq, n=3, figsize=(8, 8), cmap='gray', overlay=True):
     """
     Plot one triplet of input / output / label frames.
-
-    Returns:
-        fig: Matplotlib Figure object
+    If overlay=True, show overlay in center column.
     """
     fig, axs = plt.subplots(n, 3, figsize=figsize)
     axs = axs if n > 1 else [axs]
-    
+
     for i in range(n):
         input_img = input_seq[-1, i, 0].cpu().numpy()
-        output_img = output_seq[i, 0].detach().cpu().numpy()
+        pred_img = output_seq[i, 0].detach().cpu().numpy()
         label_img = label_seq[i, 0].cpu().numpy()
 
         axs[i][0].imshow(input_img, cmap=cmap)
         axs[i][0].set_title(f"Input #{i}")
         axs[i][0].axis("off")
 
-        axs[i][1].imshow(output_img, cmap=cmap)
-        axs[i][1].set_title("Predicted")
+        if overlay:
+            overlay_img = create_overlay_image(input_img, label_img, pred_img)
+            axs[i][1].imshow(overlay_img)
+            axs[i][1].set_title("Prediction Overlay")
+        else:
+            axs[i][1].imshow(pred_img, cmap=cmap)
+            axs[i][1].set_title("Predicted")
+
         axs[i][1].axis("off")
 
         axs[i][2].imshow(label_img, cmap=cmap)
         axs[i][2].set_title("Ground Truth")
         axs[i][2].axis("off")
+
     plt.tight_layout()
     return fig
+
 
 
 def visualize_predictions_video(
@@ -127,6 +171,7 @@ def visualize_predictions_video(
     os.makedirs(save_dir, exist_ok=True)
     model.eval()
     frame_paths = []
+    
     with torch.no_grad():
         idx = 0
         for batch in dataloader:
@@ -150,40 +195,7 @@ def visualize_predictions_video(
                     img_rgb = img_rgb.astype(np.uint8)
                     
                     if t == T - 1:
-                        # Get binary masks
-                        y_np = y[0].cpu().numpy().astype(bool)
-                        pred_np = pred[0].cpu().numpy().astype(bool)
-
-                        # Convert grayscale image to BGR and normalize to [0, 1]
-                        img_rgb = np.stack([img, img, img], axis=-1).astype(np.float32)
-                        img_rgb /= 255.0 if img_rgb.max() > 1.0 else 1.0
-
-                        # Define colors in BGR (OpenCV format)
-                        green  = np.array([0.0, 1.0, 0.0])  # GT only
-                        red    = np.array([0.0, 0.0, 1.0])  # Prediction only
-                        yellow = np.array([0.0, 1.0, 1.0])  # Overlap (GT & prediction)
-
-                        alpha = 0.4
-
-                        # Create overlay map
-                        overlay = np.zeros_like(img_rgb)
-
-                        gt_only = y_np & ~pred_np
-                        pred_only = pred_np & ~y_np
-                        overlap = y_np & pred_np
-
-                        overlay[gt_only] = green
-                        overlay[pred_only] = red
-                        overlay[overlap] = yellow
-
-                        mask = gt_only | pred_only | overlap
-                        mask3 = np.repeat(mask[:, :, np.newaxis], 3, axis=2)
-
-                        # Alpha blend
-                        img_rgb[mask3] = (1 - alpha) * img_rgb[mask3] + alpha * overlay[mask3]
-
-                        # Convert back to uint8
-                        img_rgb = (img_rgb * 255).clip(0, 255).astype(np.uint8)
+                        img_rgb = create_overlay_image(img, y[0].cpu().numpy(), pred[0].cpu().numpy())
 
                     img_path = os.path.join(save_dir, f"frame_{idx:05d}.png")
                     cv2.imwrite(img_path, img_rgb)
