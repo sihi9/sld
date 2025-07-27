@@ -69,7 +69,9 @@ def main():
             use_plif_encoder=cfg.model.use_plif_encoder,
             use_plif_recurrent=cfg.model.use_plif_recurrent,
             use_plif_decoder=cfg.model.use_plif_decoder,
-            init_tau=cfg.model.init_tau,
+            init_tau_recurrent=cfg.model.init_tau_recurrent,
+            init_tau_encoder=cfg.model.init_tau_encoder,
+            init_tau_decoder=cfg.model.init_tau_decoder,
             visualize=cfg.log.vis_interval > 0
         )
     else:
@@ -135,7 +137,7 @@ def main():
         logger=logger
     )
         
-    visualize_random_batch(model, test_loader, device=device, logger=logger, step=cfg.train.epochs)
+    visualize_random_batch(model, test_loader, device=device, n=cfg.data.batch_size, logger=logger, step=cfg.train.epochs)
 
     logger.close()
 

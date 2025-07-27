@@ -27,7 +27,7 @@ def visualize_random_batch(model, dataloader, device, sample_idx=0, n=3, time_id
             input_seq = input_seq.permute(1, 0, 2, 3, 4).to(device)  # [T, B, C, H, W]
             label_seq = label_seq.to(device)
 
-            output_seq = model(input_seq)  # [B, 1, H, W]
+            output_seq = model(input_seq, return_logits=False)  # [B, 1, H, W]
 
             fig = show_sample_triplet(input_seq.cpu(), 
                                       output_seq.cpu(),
@@ -177,7 +177,7 @@ def visualize_predictions_video(
             inputs = inputs.to(device)
             labels = labels.to(device)
             input_seq = inputs.permute(1, 0, 2, 3, 4)  # [T, B, 1, H, W]
-            outputs = model(input_seq)                # [B, 1, H, W]
+            outputs = model(input_seq, return_logits=False)                # [B, 1, H, W]
             preds = (outputs > threshold).float()
 
             for b in range(B):

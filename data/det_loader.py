@@ -280,7 +280,7 @@ def build_det_dataloaders(batch_size=4,
     )
 
     return {
-        "train": DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers),
+        "train": DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, drop_last=True),
         "val": DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers),
         "test": DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     }

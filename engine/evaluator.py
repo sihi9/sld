@@ -61,7 +61,9 @@ def evaluate(model, dataloader, device, loss_fn=None, use_amp=False):
     model.to(device)
 
     if loss_fn is None:
-        loss_fn = F.binary_cross_entropy
+        # Use raw logits; targets can be smoothed
+        pos_weight = torch.tensor([5.0], device=device)
+        loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     total_loss = 0.0
     total_iou = 0.0
@@ -74,10 +76,10 @@ def evaluate(model, dataloader, device, loss_fn=None, use_amp=False):
             targets = targets.to(device)
 
             with autocast(device_type=device.split(':')[0]) if use_amp else torch.no_grad():
-                outputs = model(inputs)
+                outputs = model(inputs, return_logits=True) 
                 loss = loss_fn(outputs, targets)
 
-            iou = compute_batch_iou(outputs, targets)
+            iou = compute_batch_iou(outputs, targets, expect_logits=True)
 
             total_loss += loss.item()
             total_iou += iou
@@ -98,15 +100,19 @@ def evaluate(model, dataloader, device, loss_fn=None, use_amp=False):
     return avg_loss, avg_iou
 
 
-def compute_batch_iou(preds, targets, threshold=0.5, eps=1e-6):
+def compute_batch_iou(preds, targets, expect_logits=False, threshold=0.5, eps=1e-6):
     """
     Computes mean IoU for a batch of predictions and targets.
 
     Args:
         preds: Tensor of shape [B, 1, H, W]
         targets: Tensor of same shape
+        expect_logits: If True, apply sigmoid to preds
         threshold: Threshold to binarize outputs
+        eps: Small value to avoid division by zero
     """
+    if expect_logits:
+        preds = torch.sigmoid(preds)
     preds_bin = (preds > threshold).float()
     targets_bin = (targets > 0.5).float()
 

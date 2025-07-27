@@ -3,7 +3,9 @@ features: [16, 32]
 hidden_dim: 512
 recurrent: true
 output_timesteps: 1
-use_plif_encoder: false
+use_plif_encoder: true
 use_plif_recurrent: true
-use_plif_decoder: false
-init_tau: 20.0
+use_plif_decoder: true
+init_tau_recurrent: 20.0
+init_tau_encoder: 2.0
+init_tau_decoder: 2.0

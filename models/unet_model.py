@@ -16,7 +16,9 @@ class SpikingUNetRNN(nn.Module):
         use_plif_encoder=False,
         use_plif_recurrent=False,
         use_plif_decoder=False,
-        init_tau=2.0,
+        init_tau_recurrent=2.0,
+        init_tau_encoder=5.0,
+        init_tau_decoder=5.0,
         visualize=False
     ):
         super().__init__()
@@ -27,7 +29,9 @@ class SpikingUNetRNN(nn.Module):
         self.use_plif_encoder = use_plif_encoder
         self.use_plif_recurrent = use_plif_recurrent
         self.use_plif_decoder = use_plif_decoder
-        self.init_tau = init_tau
+        self.init_tau_recurrent = init_tau_recurrent
+        self.init_tau_encoder = init_tau_encoder
+        self.init_tau_decoder = init_tau_decoder
         self.visualize = visualize
 
         
@@ -55,7 +59,7 @@ class SpikingUNetRNN(nn.Module):
         self.encoders = nn.ModuleList()
         prev_channels = in_channels
         for feat in features:
-            self.encoders.append(self.double_conv(prev_channels, feat, use_plif_encoder))
+            self.encoders.append(self.double_conv(prev_channels, feat, init_tau_encoder, use_plif_encoder))
             prev_channels = feat
 
         # Bottom pooling
@@ -72,7 +76,7 @@ class SpikingUNetRNN(nn.Module):
         )
                 
         self.recurrent = layer.LinearRecurrentContainer(
-            self._make_neuron(use_plif=self.use_plif_recurrent),
+            self._make_neuron(init_tau_recurrent, use_plif=self.use_plif_recurrent),
             in_features=hidden_dim,
             out_features=hidden_dim,
             bias=True
@@ -96,7 +100,7 @@ class SpikingUNetRNN(nn.Module):
             )
             # decoder expects skip_ch + feat channels
             self.decoders.append(
-                self.double_conv(skip_ch + feat, feat, use_plif_decoder)
+                self.double_conv(skip_ch + feat, feat, init_tau_decoder, use_plif_decoder)
             )
             prev_ch = feat
 
@@ -104,7 +108,7 @@ class SpikingUNetRNN(nn.Module):
             layer.ConvTranspose2d(prev_ch, features[0], kernel_size=2, stride=2)
         )
         self.decoders.append(
-            self.double_conv(features[0], features[0], use_plif_decoder)
+            self.double_conv(features[0], features[0], init_tau_decoder, use_plif_decoder)
         )
 
         # Final 1x1 conv
@@ -125,7 +129,7 @@ class SpikingUNetRNN(nn.Module):
         # Use multi-step mode
         functional.set_step_mode(self, step_mode='m')
 
-    def forward(self, x: torch.Tensor, return_logits : bool = False) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, return_logits : bool = True) -> torch.Tensor:
         # x: [T, B, C, H, W]
         # Reset states
         for m in self.modules():
@@ -196,13 +200,13 @@ class SpikingUNetRNN(nn.Module):
 
     
     
-    def _make_neuron(self, use_plif=False):
+    def _make_neuron(self, init_tau = 5.0, use_plif=False):
         if use_plif:
-            return neuron.ParametricLIFNode(init_tau=self.init_tau, surrogate_function=surrogate.ATan()) 
+            return neuron.ParametricLIFNode(init_tau=init_tau, surrogate_function=surrogate.ATan()) 
         else:
             return neuron.LIFNode(surrogate_function=surrogate.ATan())
 
-    def double_conv(self, in_channels, out_channels, use_plif=False):
+    def double_conv(self, in_channels, out_channels, init_tau = 5.0, use_plif=False):
         """
         Helper to create two spiking convolutional layers with batchnorm and LIF/PLIF neurons,
         instantiating fresh neuron nodes for each layer to maintain independent states.
@@ -210,8 +214,8 @@ class SpikingUNetRNN(nn.Module):
         return nn.Sequential(
             layer.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
             layer.BatchNorm2d(out_channels),
-            self._make_neuron(use_plif=use_plif),
+            self._make_neuron(init_tau=init_tau, use_plif=use_plif),
             layer.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
             layer.BatchNorm2d(out_channels),
-            self._make_neuron(use_plif=use_plif)
+            self._make_neuron(init_tau=init_tau, use_plif=use_plif)
         )

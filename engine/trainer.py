@@ -25,15 +25,19 @@ def train(model,
     model.to(device)
     model.train()
 
+    # def weighted_bce(preds, targets, pos_weight=5.0):
+    #     weights = torch.where(targets == 1, pos_weight, 1.0)
+    #     return F.binary_cross_entropy(preds, targets, weight=weights)
 
-    def weighted_bce(preds, targets, pos_weight=5.0):
-        weights = torch.where(targets == 1, pos_weight, 1.0)
-        return F.binary_cross_entropy(preds, targets, weight=weights)
+    # if loss_fn is None:
+    #     # pos_weight should be a 1-element tensor
+    #     loss_fn = lambda preds, targets: weighted_bce(preds, targets, pos_weight=5.0)
 
     if loss_fn is None:
-        # pos_weight should be a 1-element tensor
-        loss_fn = lambda preds, targets: weighted_bce(preds, targets, pos_weight=5.0)
-
+        # Use raw logits; targets can be smoothed
+        pos_weight = torch.tensor([5.0], device=device)
+        loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    
     best_val_iou = 0.0
 
     for epoch in range(epochs):
@@ -49,7 +53,7 @@ def train(model,
             optimizer.zero_grad()
 
             # todo: use amp
-            outputs = model(inputs)  # [B, C, H, W]      
+            outputs = model(inputs, return_logits=True)  # [B, C, H, W]      
             loss = loss_fn(outputs, targets) 
             loss.backward()
             
@@ -82,6 +86,7 @@ def train(model,
             functional.reset_net(model)
             
             if loss.item() > (2.5 * prev_avg_loss):
+                print(f"⚠️ High loss detected: {loss.item():.4f} (prev avg: {prev_avg_loss:.4f})")
                 visualize_batch_predictions(inputs, targets, outputs, logger, epoch, title_tag="loss_spike")
             
             
