@@ -7,7 +7,7 @@ from torch.amp import GradScaler
 
 from data.loader_utils import DataModule
 from models.base_model import SpikingRNN
-from models.unet_model import SpikingUNetRNN
+from models.unet_model_ss import SpikingUNetRNN
 from engine.trainer import train
 from engine.evaluator import run_final_evaluation_and_save
 
@@ -15,7 +15,6 @@ from engine.evaluator import run_final_evaluation_and_save
 from utils.visualizations import visualize_random_batch, visualize_predictions_video
 from utils.config import load_config, get_device
 from utils.experiment import ExperimentManager
-
 
 def main():
     args = parse_args()
@@ -53,7 +52,6 @@ def main():
             encoder_channels=cfg.model.encoder_channels,
             hidden_dim=cfg.model.hidden_dim,
             output_timesteps=cfg.model.output_timesteps,
-            
             use_plif_encoder=cfg.model.use_plif_encoder,
             use_plif_recurrent=cfg.model.use_plif_recurrent,
             use_plif_decoder=cfg.model.use_plif_decoder,
@@ -67,6 +65,7 @@ def main():
             features=cfg.model.features,
             fc_bottleneck=cfg.model.fc_bottleneck,
             fc_recurrent=cfg.model.fc_recurrent,
+            conv_recurrent=cfg.model.conv_recurrent,
             hidden_dim=cfg.model.hidden_dim,
             use_plif_encoder=cfg.model.use_plif_encoder,
             use_plif_recurrent=cfg.model.use_plif_recurrent,
@@ -162,6 +161,10 @@ def parse_args():
     parser.add_argument('--fc-recurrent', dest='model_fc_recurrent', action='store_true', help='Use recurrent bottleneck')
     parser.add_argument('--no-fc-recurrent', dest='model_fc_recurrent', action='store_false', help='Do not use recurrent bottleneck')
     parser.set_defaults(model_fc_recurrent=None)
+    
+    parser.add_argument('--conv-recurrent', dest='model_conv_recurrent', action='store_true', help='Use recurrent encoder')
+    parser.add_argument('--no-conv-recurrent', dest='model_conv_recurrent', action='store_false', help='Do not use recurrent encoder')
+    parser.set_defaults(model_conv_recurrent=None)
     
     parser.add_argument('--description', type=str, dest='cfg_description', help='Override config description')
     

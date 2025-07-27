@@ -43,6 +43,8 @@ def load_config(path="configs/default.yaml", model=None, data=None, overrides=No
             cfg.setdefault("model", {})["fc_bottleneck"] = overrides.model_fc_bottleneck
         if overrides.model_fc_recurrent is not None:
             cfg.setdefault("model", {})["fc_recurrent"] = overrides.model_fc_recurrent
+        if overrides.model_conv_recurrent is not None:
+            cfg.setdefault("model", {})["conv_recurrent"] = overrides.model_conv_recurrent
         if overrides.cfg_description is not None:
             cfg["description"] = overrides.cfg_description
 

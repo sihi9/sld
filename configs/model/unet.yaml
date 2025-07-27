@@ -1,7 +1,8 @@
 name: unet
-features: [16, 32]
-fc_bottleneck: false
-fc_recurrent: false  # only useful when fc_bottleneck is true
+features: [16, 32, 64]
+fc_bottleneck: true
+fc_recurrent: true  # only useful when fc_bottleneck is true
+conv_recurrent: true  # use conv layers for recurrent connections
 hidden_dim: 512     # only useful when fc_bottleneck is true
 output_timesteps: 1
 use_plif_encoder: true

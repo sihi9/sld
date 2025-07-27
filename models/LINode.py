@@ -16,6 +16,10 @@ class LeakyIntegrator(nn.Module):
     @property
     def v_seq(self):
         return self.neuron.v_seq
+    
+    @property
+    def v(self):
+        return self.neuron.v
 
 
     def forward(self, x):
