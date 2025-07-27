@@ -14,4 +14,4 @@ conda activate snn
 echo "Running on node: $(hostname)"
 
 # Run your Python script
-python ~/sld/main.py
+python ~/sld/main.py "$@"

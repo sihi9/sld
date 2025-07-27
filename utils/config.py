@@ -37,6 +37,14 @@ def load_config(path="configs/default.yaml", model=None, data=None, overrides=No
             cfg.setdefault("train", {})["lr"] = overrides.train_lr
         if overrides.model_hidden_dim is not None:
             cfg.setdefault("model", {})["hidden_dim"] = overrides.model_hidden_dim
+        if overrides.model_features is not None:
+            cfg.setdefault("model", {})["features"] = overrides.model_features
+        if overrides.model_fc_bottleneck is not None:
+            cfg.setdefault("model", {})["fc_bottleneck"] = overrides.model_fc_bottleneck
+        if overrides.model_fc_recurrent is not None:
+            cfg.setdefault("model", {})["fc_recurrent"] = overrides.model_fc_recurrent
+        if overrides.cfg_description is not None:
+            cfg["description"] = overrides.cfg_description
 
     return dict_to_namespace(cfg)
 

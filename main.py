@@ -153,6 +153,18 @@ def parse_args():
     parser.add_argument('--lr', type=float, dest='train_lr', help='Override training learning rate')
     parser.add_argument('--hidden_dim', type=int, dest='model_hidden_dim', help='Override model hidden dim')
 
+    parser.add_argument('--features', nargs='+', type=int, dest='model_features', help='Override U-Net features')
+    parser.add_argument('--fc-bottleneck', dest='model_fc_bottleneck', action='store_true', help='Use FC bottleneck')
+    parser.add_argument('--no-fc-bottleneck', dest='model_fc_bottleneck', action='store_false', help='Do not use FC bottleneck')
+    parser.set_defaults(model_fc_bottleneck=None)
+    
+
+    parser.add_argument('--fc-recurrent', dest='model_fc_recurrent', action='store_true', help='Use recurrent bottleneck')
+    parser.add_argument('--no-fc-recurrent', dest='model_fc_recurrent', action='store_false', help='Do not use recurrent bottleneck')
+    parser.set_defaults(model_fc_recurrent=None)
+    
+    parser.add_argument('--description', type=str, dest='cfg_description', help='Override config description')
+    
     parser.add_argument('--experiment-name', type=str, help='Name of experiment to resume/evaluate')
     parser.add_argument('--eval-only', action='store_true', help='If set, only run evaluation on given experiment')
 
