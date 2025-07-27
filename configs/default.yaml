@@ -3,7 +3,7 @@ description: >
 
 defaults:
   model: unet # base or unet
-  data: det   # det, carla or demo
+  data: det # det, carla or demo
 
 train:
   epochs: 100
@@ -13,4 +13,4 @@ train:
   save_intermediate: false
 
 log:
-  vis_interval: 30
+  vis_interval: 10

@@ -39,7 +39,7 @@ class SpikingUNetRNN(nn.Module):
         self.init_tau_encoder = init_tau_encoder
         self.init_tau_decoder = init_tau_decoder
         self.visualize = visualize
-
+        print(f'self fully connected bottleneck: {self.fc_bottleneck}')
         
         # Output scaling and bias parameters
         self.output_scale = nn.Parameter(torch.tensor(5.0))
@@ -50,6 +50,7 @@ class SpikingUNetRNN(nn.Module):
         
         depth = len(features)  # Number of downsampling layers
         downscaling_factor = 2 ** (depth - 1)
+        print(f"Input size: {H}x{W}, downscaling factor: {downscaling_factor}")
         assert (
             H % downscaling_factor == 0 
             and W % downscaling_factor == 0
@@ -88,7 +89,7 @@ class SpikingUNetRNN(nn.Module):
 
         if self.fc_bottleneck:
             self.reduce_fc = layer.Linear(flat_dim, hidden_dim, bias=False, step_mode='m')
-            
+            print(f"Using fully connected bottleneck with hidden_dim={hidden_dim} and flat_dim={flat_dim}")
             if self.fc_recurrent:
                 self.bottleneck_neuron = layer.LinearRecurrentContainer(
                     self._make_neuron(init_tau_recurrent, use_plif=use_plif_recurrent),

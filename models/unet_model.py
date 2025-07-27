@@ -76,6 +76,7 @@ class SpikingUNetRNN(nn.Module):
         if self.fc_bottleneck:
             self.reduce_fc = layer.Linear(flat_dim, hidden_dim, bias=False, step_mode='m')
             
+            print(f"Using fully connected bottleneck with hidden_dim={hidden_dim} and flat_dim={flat_dim}")
             if self.fc_recurrent:
                 self.bottleneck_neuron = layer.LinearRecurrentContainer(
                     self._make_neuron(init_tau_recurrent, use_plif=use_plif_recurrent),

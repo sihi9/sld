@@ -1,5 +1,5 @@
 name: unet
-features: [16, 32, 64]
+features: [16, 32]
 fc_bottleneck: true
 fc_recurrent: true  # only useful when fc_bottleneck is true
 conv_recurrent: true  # use conv layers for recurrent connections

@@ -188,20 +188,28 @@ def log_spike_rate_summary(model, logger: SpikeLogger, epoch: int):
         if not records or len(records) == 0:
             continue
         
-        spikes = records[0].detach() # [T, B, ...]   
-        spikes = spikes.float().mean(dim=1)   # average over batch
+        # todo: this assumes single step mode, i.e., only one record per layer
+        spikes = torch.stack(records).detach().mean(dim=0)  # average over timesteps, [B, C, H, W] or [B, N]
         
-        if spikes.dim() == 2:
+        #spikes = records[0].detach() # legacy code for multi step mode
+        spikes = spikes.float().mean(dim=0)   # average over batch
+        
+        if spikes.dim() == 1: # todo: i think thats right?
+            rate = spikes.cpu().numpy()
+        elif spikes.dim() == 2:
             rate = spikes.float().mean(dim=0).cpu().numpy()  # [N]
+        elif spikes.dim() == 3: # no time dimension, [C]
+            rate = spikes.float().mean(dim=(1, 2)).cpu().numpy()    
         elif spikes.dim() == 4:
             rate = spikes.float().mean(dim=(0, 2, 3)).cpu().numpy()  # [C]
         else:
             print(f"⚠️ Skipped {layer_name}: unexpected shape {records[0].shape}")
+            continue
 
         fig, ax = plt.subplots()
         ax.bar(np.arange(len(rate)), rate)
         ax.set_title(f"Avg Spike Rate - {layer_name}")
-        ax.set_xlabel("Neuron Index" if spikes.dim() == 2 else "Channel Index")
+        ax.set_xlabel("Neuron Index" if spikes.dim() == 2 or spikes.dim() == 1 else "Channel Index")
         ax.set_ylabel("Firing Rate")
         logger.writer.add_figure(f"spike_rate_summary/{layer_name}", fig, epoch)
         
