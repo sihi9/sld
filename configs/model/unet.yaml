@@ -1,7 +1,8 @@
 name: unet
 features: [16, 32]
-hidden_dim: 512
-recurrent: true
+fc_bottleneck: false
+fc_recurrent: false  # only useful when fc_bottleneck is true
+hidden_dim: 512     # only useful when fc_bottleneck is true
 output_timesteps: 1
 use_plif_encoder: true
 use_plif_recurrent: true
