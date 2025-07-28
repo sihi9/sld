@@ -67,6 +67,8 @@ def main():
             fc_recurrent=cfg.model.fc_recurrent,
             conv_recurrent=cfg.model.conv_recurrent,
             hidden_dim=cfg.model.hidden_dim,
+            output_timesteps=cfg.model.output_timesteps,
+            initial_scaling=cfg.model.initial_scaling,
             use_plif_encoder=cfg.model.use_plif_encoder,
             use_plif_recurrent=cfg.model.use_plif_recurrent,
             use_plif_decoder=cfg.model.use_plif_decoder,

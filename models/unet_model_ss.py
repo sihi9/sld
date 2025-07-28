@@ -16,6 +16,7 @@ class SpikingUNetRNN(nn.Module):
         conv_recurrent=False,
         hidden_dim=512,
         output_timesteps=1,
+        initial_scaling: int=None,
         use_plif_encoder=False,
         use_plif_recurrent=False,
         use_plif_decoder=False,
@@ -32,6 +33,11 @@ class SpikingUNetRNN(nn.Module):
         self.conv_recurrent = conv_recurrent
         self.hidden_dim = hidden_dim
         self.output_timesteps = output_timesteps
+        self.initial_scaling = initial_scaling
+        self.scaled_input_size = (
+            input_size[0] // initial_scaling if initial_scaling is not None else input_size[0],
+            input_size[1] // initial_scaling if initial_scaling is not None else input_size[1]
+        )
         self.use_plif_encoder = use_plif_encoder
         self.use_plif_recurrent = use_plif_recurrent
         self.use_plif_decoder = use_plif_decoder
@@ -49,8 +55,8 @@ class SpikingUNetRNN(nn.Module):
         H, W = input_size
         
         depth = len(features)  # Number of downsampling layers
-        downscaling_factor = 2 ** (depth - 1)
-        print(f"Input size: {H}x{W}, downscaling factor: {downscaling_factor}")
+        downscaling_factor = 2 ** (depth - 1) * self.initial_scaling if initial_scaling is not None else 1
+        print(f"Input size: {H}x{W}, total downscaling factor: {downscaling_factor}, initial scaling: {self.initial_scaling}")
         assert (
             H % downscaling_factor == 0 
             and W % downscaling_factor == 0
@@ -59,6 +65,27 @@ class SpikingUNetRNN(nn.Module):
         if conv_recurrent:
             assert len(features) >= 2, "conv_recurrent requires at least two encoder layers"
 
+        if self.initial_scaling is not None:
+            self.downscale = layer.Conv2d(
+                in_channels=in_channels,
+                out_channels=in_channels,
+                kernel_size=self.initial_scaling,
+                stride=self.initial_scaling,
+                padding=0,
+                bias=False
+            )
+            self.upscale = nn.ConvTranspose2d(
+                in_channels=out_channels,
+                out_channels=out_channels,
+                kernel_size=self.initial_scaling,
+                stride=self.initial_scaling,
+                padding=0,
+                bias=False
+            )
+        else:
+            self.downscale = None
+            self.upscale = None
+            
 
         # Encoder path
         self.encoders = nn.ModuleList()
@@ -74,7 +101,7 @@ class SpikingUNetRNN(nn.Module):
         if self.conv_recurrent:
             self._recurrent_feedback = torch.zeros(1)  # placeholder
             self.recurrent_upsample = nn.Sequential(
-                nn.Upsample(size=self.input_size, mode='bilinear', align_corners=False),
+                nn.Upsample(size=self.scaled_input_size, mode='bilinear', align_corners=False),
                 nn.Conv2d(features[-2], in_channels, kernel_size=1)  # project channels
             )
 
@@ -147,7 +174,7 @@ class SpikingUNetRNN(nn.Module):
 
         if self.conv_recurrent:
             self._recurrent_feedback = torch.zeros(
-                x.shape[1], self.features[-2], *self.input_size, device=x.device
+                x.shape[1], self.features[-2], *self.scaled_input_size, device=x.device
             )
 
         for t in range(x.shape[0]):
@@ -173,6 +200,9 @@ class SpikingUNetRNN(nn.Module):
         skips = []
         feedback = self._recurrent_feedback if self.conv_recurrent else None
 
+        if self.downscale is not None:
+            x = self.downscale(x)
+            
         # Concatenate recurrent feedback if enabled
         if self.conv_recurrent:
             fb_scaled = self.recurrent_scale * self.recurrent_upsample(feedback)
@@ -203,6 +233,7 @@ class SpikingUNetRNN(nn.Module):
             x = up(x)
             skip = skips.pop()
             if x.shape[-2:] != skip.shape[-2:]:
+                print(f"Padding skip connection from {skip.shape} to {x.shape}")
                 dy = skip.size(-2) - x.size(-2)
                 dx = skip.size(-1) - x.size(-1)
                 x = nn.functional.pad(x, [dx // 2, dx - dx // 2, dy // 2, dy - dy // 2])
@@ -212,7 +243,11 @@ class SpikingUNetRNN(nn.Module):
         # Final conv + membrane integration
         x = self.final_conv(x)
         _ = self.output_integrator(x)
-        return self.output_integrator.v  # [B, 1, H, W]
+        v = self.output_integrator.v  # [B, 1, H, W]
+        if self.upscale is not None:
+            v = self.upscale(v)
+        return v    
+        
 
         
     def aggregate_output(self, v_seq: torch.Tensor):

@@ -48,6 +48,7 @@ class HDF5Dataset(Dataset):
     def __init__(self,
                  h5_path: str,
                  downscale_factor: int = 1,
+                 model_downscale: int = None,
                  filter_fn=None,
                  used_T = None,
                  use_static=False,
@@ -68,6 +69,7 @@ class HDF5Dataset(Dataset):
         path_prefix = './data/DET/'  # Assuming data files are in a 'data' directory
         self.h5_path = path_prefix + h5_path
         self.downscale_factor = downscale_factor
+        self.model_downscale = model_downscale
         self.filter_fn = filter_fn
         self.used_T = used_T
         self.use_static = use_static
@@ -134,8 +136,8 @@ class HDF5Dataset(Dataset):
 
         # make sure the image can be fed into a U-Net model with 3 2x2 downscales
         T, C, H2, W2 = x_ds.shape
-        rem_h = H2 % 8
-        rem_w = W2 % 8
+        rem_h = H2 % self.model_downscale if self.model_downscale is not None else 1
+        rem_w = W2 % self.model_downscale if self.model_downscale is not None else 1
         
         if rem_h != 0 or rem_w != 0:
             # Crop the top because its less relevant
@@ -176,6 +178,7 @@ class MultiHDF5Dataset(Dataset):
     def __init__(self, 
                  h5_paths, 
                  downscale_factor=1, 
+                 model_downscale=None,
                  filter_fn=None, 
                  used_T=None,
                  use_static=False,
@@ -197,6 +200,7 @@ class MultiHDF5Dataset(Dataset):
         self.datasets = [
             HDF5Dataset(h5_path=path,
                         downscale_factor=downscale_factor,
+                        model_downscale=model_downscale,
                         filter_fn=filter_fn,
                         used_T=used_T,
                         use_static=use_static,
@@ -222,6 +226,7 @@ class MultiHDF5Dataset(Dataset):
 def build_det_dataloaders(batch_size=4, 
                           num_workers=0, 
                           downscale_factor=1,
+                          model_downscale=8,
                           used_T=None,
                           use_static=False,
                           label_smoothing_enabled=False,
@@ -258,6 +263,7 @@ def build_det_dataloaders(batch_size=4,
     dataset = MultiHDF5Dataset(
         h5_paths=train_val_files,
         downscale_factor=downscale_factor,
+        model_downscale=model_downscale,
         used_T=used_T,
         use_static=use_static,
         label_smoothing_enabled=label_smoothing_enabled,

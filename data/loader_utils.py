@@ -52,6 +52,7 @@ class DataModule:
                 batch_size=data_cfg.batch_size,
                 num_workers=data_cfg.num_workers,
                 downscale_factor=data_cfg.downscale,
+                model_downscale=self.cfg.model.initial_scaling *  (2**(len(self.cfg.model.features) - 1)),
                 used_T=data_cfg.used_T,
                 use_static=data_cfg.use_static,
                 label_smoothing_enabled=data_cfg.label_smoothing.enabled,
