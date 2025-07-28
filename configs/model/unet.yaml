@@ -2,10 +2,10 @@ name: unet
 features: [16, 32]
 fc_bottleneck: true
 fc_recurrent: true  # only useful when fc_bottleneck is true
-conv_recurrent: true  # use conv layers for recurrent connections
+conv_recurrent: false  # use conv layers for recurrent connections
 hidden_dim: 512     # only useful when fc_bottleneck is true
 output_timesteps: 1
-initial_scaling: 4  # initial scaling factor for input size, used to calculate downscaling factor
+initial_scaling: 1  # initial scaling factor for input size, used to calculate downscaling factor
 use_plif_encoder: true
 use_plif_recurrent: true
 use_plif_decoder: true

@@ -65,7 +65,7 @@ class SpikingUNetRNN(nn.Module):
         if conv_recurrent:
             assert len(features) >= 2, "conv_recurrent requires at least two encoder layers"
 
-        if self.initial_scaling is not None:
+        if self.initial_scaling is not None and self.initial_scaling > 1:
             self.downscale = layer.Conv2d(
                 in_channels=in_channels,
                 out_channels=in_channels,

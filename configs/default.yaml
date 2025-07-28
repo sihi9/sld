@@ -1,5 +1,5 @@
 description: >
-  Recurrent bigger UNet training to compare with static
+  Comparison U-Net with manual downscaling 
 
 defaults:
   model: unet # base or unet
