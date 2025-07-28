@@ -1,16 +1,16 @@
 description: >
-  Comparison U-Net with manual downscaling 
+  U-Net with initial scaling
 
 defaults:
-  model: unet # base or unet
+  model: lanesnn # base, unet or lanesnn
   data: det # det, carla or demo
 
 train:
-  epochs: 100
+  epochs: 5
   lr: 0.001
   amp: false
   device: auto
   save_intermediate: false
 
 log:
-  vis_interval: 10
+  vis_interval: 1

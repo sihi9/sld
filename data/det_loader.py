@@ -52,6 +52,7 @@ class HDF5Dataset(Dataset):
                  filter_fn=None,
                  used_T = None,
                  use_static=False,
+                 use_poisson=False,
                  label_smoothing_enabled=False,
                  smooth_bg=0.05,
                  smooth_lane=0.95):
@@ -62,6 +63,7 @@ class HDF5Dataset(Dataset):
             filter_fn: Optional function to filter samples based on input and label.
             used_T: If specified, only the last `used_T` frames will  be used.
             use_static: If True, will only use last frame.
+            use_poisson: If True, will create poisson distribution of last frame
             label_smoothing_enabled: If True, will apply label smoothing.
             smooth_bg: Background label smoothing value.
             smooth_lane: Lane label smoothing value.
@@ -73,6 +75,7 @@ class HDF5Dataset(Dataset):
         self.filter_fn = filter_fn
         self.used_T = used_T
         self.use_static = use_static
+        use_poisson = use_poisson
         self.label_smoothing_enabled = label_smoothing_enabled
         self.smooth_bg = smooth_bg
         self.smooth_lane = smooth_lane
@@ -182,6 +185,7 @@ class MultiHDF5Dataset(Dataset):
                  filter_fn=None, 
                  used_T=None,
                  use_static=False,
+                 use_poisson=False,
                  label_smoothing_enabled=False,
                  smooth_bg=0.05,
                  smooth_lane=0.95):
@@ -193,6 +197,7 @@ class MultiHDF5Dataset(Dataset):
             filter_fn: Optional function to filter samples based on input and label.
             used_T: If specified, only the last `used_T` frames will be used.
             use_static: If True, will only use last frame.
+            use_poisson: If True, will create poisson distribution of last frame
             label_smoothing_enabled: If True, will apply label smoothing.
             smooth_bg: Background label smoothing value.
             smooth_lane: Lane label smoothing value.
@@ -204,6 +209,7 @@ class MultiHDF5Dataset(Dataset):
                         filter_fn=filter_fn,
                         used_T=used_T,
                         use_static=use_static,
+                        use_poisson=use_poisson,
                         label_smoothing_enabled=label_smoothing_enabled,
                         smooth_bg=smooth_bg,
                         smooth_lane=smooth_lane)
@@ -229,6 +235,7 @@ def build_det_dataloaders(batch_size=4,
                           model_downscale=8,
                           used_T=None,
                           use_static=False,
+                          use_poisson=False,
                           label_smoothing_enabled=False,
                           smooth_bg=0.05,
                           smooth_lane=0.95,
@@ -245,6 +252,7 @@ def build_det_dataloaders(batch_size=4,
         downscale_factor: Factor by which to downscale the frames and labels.
         used_T: If specified, only the last `used_T` frames will be used.
         use_static: If True, will only use last frame.
+        use_poisson: If True, will create poisson distribution of last frame.
         label_smoothing_enabled: If True, will apply label smoothing.
         smooth_bg: Background label smoothing value.
         smooth_lane: Lane label smoothing value.
@@ -266,6 +274,7 @@ def build_det_dataloaders(batch_size=4,
         model_downscale=model_downscale,
         used_T=used_T,
         use_static=use_static,
+        use_poisson=use_poisson,
         label_smoothing_enabled=label_smoothing_enabled,
         smooth_bg=smooth_bg,
         smooth_lane=smooth_lane,
@@ -281,8 +290,13 @@ def build_det_dataloaders(batch_size=4,
     test_dataset = HDF5Dataset(
         h5_path=test_file,
         downscale_factor=downscale_factor,
+        model_downscale=model_downscale,
         used_T=used_T,
-        use_static=use_static
+        use_static=use_static,
+        use_poisson=use_poisson,
+        label_smoothing_enabled=label_smoothing_enabled,
+        smooth_bg=smooth_bg,
+        smooth_lane=smooth_lane,
     )
 
     return {

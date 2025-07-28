@@ -45,13 +45,12 @@ class SpikingUNetRNN(nn.Module):
         self.init_tau_encoder = init_tau_encoder
         self.init_tau_decoder = init_tau_decoder
         self.visualize = visualize
-        print(f'self fully connected bottleneck: {self.fc_bottleneck}')
         
         # Output scaling and bias parameters
         self.output_scale = nn.Parameter(torch.tensor(5.0))
         self.output_bias = nn.Parameter(torch.tensor(0.5))
         self.recurrent_scale = nn.Parameter(torch.tensor(0.01))
-        
+         
         H, W = input_size
         
         depth = len(features)  # Number of downsampling layers

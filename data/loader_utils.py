@@ -8,6 +8,12 @@ class DataModule:
 
     def get_loaders(self):
         data_cfg = self.cfg.data
+        
+        # caluclate model downscale factor so dataloader can prepare data accordingly
+        initial_scaling = self.cfg.model.initial_scaling if hasattr(self.cfg.model, 'initial_scaling') else 1
+        model_downscale = 2 ** (len(self.cfg.model.features) - 1) if hasattr(self.cfg.model, 'features') else 1
+        total_model_downscale = initial_scaling * model_downscale
+        
         if data_cfg.loader == "demo":
             # exactly your old demo loader logic
             return {
@@ -52,7 +58,7 @@ class DataModule:
                 batch_size=data_cfg.batch_size,
                 num_workers=data_cfg.num_workers,
                 downscale_factor=data_cfg.downscale,
-                model_downscale=self.cfg.model.initial_scaling *  (2**(len(self.cfg.model.features) - 1)),
+                model_downscale=total_model_downscale,
                 used_T=data_cfg.used_T,
                 use_static=data_cfg.use_static,
                 label_smoothing_enabled=data_cfg.label_smoothing.enabled,

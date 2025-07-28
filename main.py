@@ -8,6 +8,7 @@ from torch.amp import GradScaler
 from data.loader_utils import DataModule
 from models.base_model import SpikingRNN
 from models.unet_model_ss import SpikingUNetRNN
+from models.laneSNN import LaneSNN
 from engine.trainer import train
 from engine.evaluator import run_final_evaluation_and_save
 
@@ -77,6 +78,15 @@ def main():
             init_tau_decoder=cfg.model.init_tau_decoder,
             visualize=cfg.log.vis_interval > 0
         )
+    elif cfg.model.name == "lanesnn":
+        model = LaneSNN(
+            input_size=(H_in, W_in),
+            hidden_dim=cfg.model.hidden_dim,
+            use_plif=cfg.model.use_plif,
+            init_tau=cfg.model.init_tau,
+            output_timesteps=cfg.model.output_timesteps,
+            visualize=cfg.log.vis_interval > 0
+        )
     else:
         raise ValueError(f"Unknown model type: {cfg.model.name}")
     
@@ -141,7 +151,6 @@ def main():
     )
         
     visualize_random_batch(model, test_loader, device=device, n=cfg.data.batch_size, logger=logger, step=cfg.train.epochs)
-
     logger.close()
 
 def parse_args():

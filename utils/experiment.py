@@ -53,6 +53,7 @@ class ExperimentManager:
             checkpoint_dir=self.checkpoint_dir,
             vis_interval=cfg.log.vis_interval
         )
+        print(f'Starting experiment: {self.exp_name}')
 
         self._log_config_to_tensorboard()
         self.log_run_metadata()

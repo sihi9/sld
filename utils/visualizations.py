@@ -35,7 +35,9 @@ def visualize_random_batch(model, dataloader, device, sample_idx=0, n=3, time_id
                                       n=n)
             if logger:
                 logger.writer.add_figure("predictions/sample_triplet", fig, global_step=step)
+                plt.close(fig)
             else:
+                print("showing plot instead of logging")
                 plt.show()
             break  
 
@@ -171,33 +173,48 @@ def visualize_predictions_video(
     with torch.no_grad():
         idx = 0
         for batch in dataloader:
-            inputs, labels = batch  # inputs: [B, T, 1, H, W], labels: [B, 1, H, W]
+            inputs, labels = batch  # [B, T, 1, H, W], [B, 1, H, W]
             B, T, _, H, W = inputs.shape
 
-            inputs = inputs.to(device)
-            labels = labels.to(device)
+            # Move only the current batch to GPU
+            inputs = inputs.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
+
             input_seq = inputs.permute(1, 0, 2, 3, 4)  # [T, B, 1, H, W]
-            outputs = model(input_seq, return_logits=False)                # [B, 1, H, W]
+
+            # Run model and IMMEDIATELY move outputs to CPU
+            outputs = model(input_seq, return_logits=False).cpu()
             preds = (outputs > threshold).float()
 
+            # Move inputs and labels back to CPU too (avoid GPU bloat)
+            input_seq = input_seq.cpu()
+            labels = labels.cpu()
+
             for b in range(B):
-                x = inputs[b]       # (T, 1, H, W)
-                y = labels[b]       # (1, H, W)
-                pred = preds[b]     # (1, H, W)
+                pred_img = preds[b, 0].numpy()
+                label_img = labels[b, 0].numpy()
 
-                for t in range(T if all_timesteps else T-1, T):
-                    img = x[t, 0].cpu().numpy()
-                    img_rgb = np.stack([img] * 3, axis=-1) * 255
-                    img_rgb = img_rgb.astype(np.uint8)
-                    
-                    if t == T - 1:
-                        img_rgb = create_overlay_image(img, y[0].cpu().numpy(), pred[0].cpu().numpy())
+                if all_timesteps:
+                    for t in range(T - 1):
+                        input_img = input_seq[t, b, 0].numpy()
+                        img_rgb = create_overlay_image(input_img, pred_img, label_img)
+                        img_path = os.path.join(save_dir, f"frame_{idx:05d}.png")
+                        cv2.imwrite(img_path, img_rgb)
+                        frame_paths.append(img_path)
+                        idx += 1
 
-                    img_path = os.path.join(save_dir, f"frame_{idx:05d}.png")
-                    cv2.imwrite(img_path, img_rgb)
-                    frame_paths.append(img_path)
-                    idx += 1
+                input_img = input_seq[-1, b, 0].numpy()
+                img_rgb = create_overlay_image(input_img, pred_img, label_img)
+                img_path = os.path.join(save_dir, f"frame_{idx:05d}.png")
+                cv2.imwrite(img_path, img_rgb)
+                frame_paths.append(img_path)
+                idx += 1
 
+            # Free GPU memory after each batch
+            del inputs, outputs, preds
+            torch.cuda.empty_cache()
+
+    print(f"✅ Saved {len(frame_paths)} frames to: {save_dir}")
     # Combine into video
     fourcc = cv2.VideoWriter_fourcc(*'I420')  # Or 'FFV1' for truly lossless
     video_path = os.path.join(save_dir, "testset_video.avi")
