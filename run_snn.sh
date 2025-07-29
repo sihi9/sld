@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=snn_training          # Name of your job
+#SBATCH --job-name=snn                   # Name of your job
 #SBATCH --partition=IMLcuda1             # GPU partition
 #SBATCH --nodelist=nodeicuda1            # Specific node
 #SBATCH --gres=gpu:RTX4000Ada:1          # Request 1 GPU

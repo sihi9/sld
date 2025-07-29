@@ -1,16 +1,16 @@
 description: >
-  U-Net with initial scaling
+  Default configuration
 
 defaults:
-  model: lanesnn # base, unet or lanesnn
+  model: unet # base, unet or lanesnn
   data: det # det, carla or demo
 
 train:
-  epochs: 5
-  lr: 0.001
+  epochs: 200
+  lr: 0.002
   amp: false
   device: auto
   save_intermediate: false
 
 log:
-  vis_interval: 1
+  vis_interval: 20

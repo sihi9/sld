@@ -10,9 +10,9 @@ from models.base_model import SpikingRNN
 from models.unet_model_ss import SpikingUNetRNN
 from models.laneSNN import LaneSNN
 from engine.trainer import train
-from engine.evaluator import run_final_evaluation_and_save
+from engine.evaluator import run_final_evaluation_and_save, evaluate
 
-
+from utils.monitoring import SpikeLogger
 from utils.visualizations import visualize_random_batch, visualize_predictions_video
 from utils.config import load_config, get_device
 from utils.experiment import ExperimentManager
@@ -30,7 +30,7 @@ def main():
     print(f"Using data loader: {cfg.data.loader}")
     
     exp = ExperimentManager(cfg, args)
-    logger = exp.get_logger()
+    logger : SpikeLogger = exp.get_logger()
 
     # Data
     loaders = DataModule(cfg).get_loaders()
@@ -84,7 +84,6 @@ def main():
             hidden_dim=cfg.model.hidden_dim,
             use_plif=cfg.model.use_plif,
             init_tau=cfg.model.init_tau,
-            output_timesteps=cfg.model.output_timesteps,
             visualize=cfg.log.vis_interval > 0
         )
     else:
@@ -112,14 +111,18 @@ def main():
     if args.eval_only:
         print(f"Running evaluation only")
         model.eval()
-
+        final_loss, final_iou = evaluate(model, val_loader, device, use_amp=False)
+        logger.log_scalar("test/final_IoU", final_iou, step=0)
+        logger.log_scalar("test/final_loss", final_loss, step=0)
+    
+        visualize_random_batch(model, test_loader, device=device, n=cfg.data.batch_size, logger=logger, step=cfg.train.epochs)
         visualize_predictions_video(
             model=model,
             dataloader=test_loader,
             device=device,
             save_dir=f"outputs/{args.experiment_name}",
             all_timesteps=False,
-            fps=1
+            fps=2
         )
         #visualize_random_batch(model, val_loader, device=cfg.train.device)
         return  # Exit after evaluation
@@ -156,8 +159,8 @@ def main():
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--model', choices=["base", "unet"], help='Model profile name')
-    parser.add_argument('--data', choices=["demo", "det"], help='Data profile name')
+    parser.add_argument('--model', choices=["base", "unet", "lanesnn"], help='Model profile name')
+    parser.add_argument('--data', choices=["demo", "det", "carla"], help='Data profile name')
 
     # CLI overrides
     parser.add_argument('--lr', type=float, dest='train_lr', help='Override training learning rate')

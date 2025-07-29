@@ -33,7 +33,8 @@ def run_final_evaluation_and_save(
     print("Running final evaluation on validation set...")
     final_loss, final_iou = evaluate(model, val_loader, device, use_amp=amp)
     print(f"Final Loss: {final_loss:.4f}, Final IoU: {final_iou:.4f}")
-
+    logger.log_scalar("test/final_IoU", final_iou, step=epochs)
+    logger.log_scalar("test/final_loss", final_loss, step=epochs)
 
     logger.save_checkpoint(name='checkpoint_final',
                            model=model,

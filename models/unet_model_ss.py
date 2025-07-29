@@ -54,7 +54,7 @@ class SpikingUNetRNN(nn.Module):
         H, W = input_size
         
         depth = len(features)  # Number of downsampling layers
-        downscaling_factor = 2 ** (depth - 1) * self.initial_scaling if initial_scaling is not None else 1
+        downscaling_factor = (2 ** (depth - 1)) * self.initial_scaling if initial_scaling is not None else 1
         print(f"Input size: {H}x{W}, total downscaling factor: {downscaling_factor}, initial scaling: {self.initial_scaling}")
         assert (
             H % downscaling_factor == 0 
@@ -82,6 +82,7 @@ class SpikingUNetRNN(nn.Module):
                 bias=False
             )
         else:
+            print("No initial scaling applied")
             self.downscale = None
             self.upscale = None
             

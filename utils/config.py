@@ -11,7 +11,9 @@ def load_config(path="configs/default.yaml", model=None, data=None, overrides=No
         resume_config_path = os.path.join(resume_path, "config.yaml")
         with open(resume_config_path, "r") as f:
             cfg = yaml.safe_load(f)
-        return dict_to_namespace(cfg)
+        cfg = dict_to_namespace(cfg)
+        cfg = apply_missing_defaults(cfg)
+        return cfg
 
     # Load base/default config
     with open(path, "r") as f:
@@ -48,7 +50,23 @@ def load_config(path="configs/default.yaml", model=None, data=None, overrides=No
         if overrides.cfg_description is not None:
             cfg["description"] = overrides.cfg_description
 
-    return dict_to_namespace(cfg)
+    cfg = dict_to_namespace(cfg)
+    cfg = apply_missing_defaults(cfg)
+    return cfg
+
+def apply_missing_defaults(cfg):
+    # Defaults for model section
+    model_defaults = {
+        "initial_scaling": 1,
+        "conv_recurrent": False,
+    }
+
+    for key, value in model_defaults.items():
+        if not hasattr(cfg.model, key):
+            setattr(cfg.model, key, value)
+
+    # Similarly, add defaults for other sections if needed
+    return cfg
 
 def dict_to_namespace(d):
     """Recursively convert a nested dict to SimpleNamespace."""

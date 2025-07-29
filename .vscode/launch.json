@@ -19,7 +19,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "python": "/home/hitzging/miniconda3/envs/snn/bin/python",
-            "args": ["--experiment-name", "unet_lr0.001_20250727_230402", "--eval-only"]
+            "args": ["--experiment-name", "unet_lr0.001_20250727_234106", "--eval-only"]
         }
     ]
 }

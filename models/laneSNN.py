@@ -10,7 +10,6 @@ class LaneSNN(nn.Module):
         hidden_dim=800,
         use_plif=False,
         init_tau=2.0,
-        output_timesteps=1,
         visualize=False
     ):
         super().__init__()
@@ -20,7 +19,6 @@ class LaneSNN(nn.Module):
         self.hidden_dim = hidden_dim
         self.use_plif = use_plif
         self.init_tau = init_tau
-        self.output_timesteps = output_timesteps
         self.visualize = visualize
 
         # Layers
@@ -30,7 +28,8 @@ class LaneSNN(nn.Module):
         self.output_neuron = self._make_neuron(init_tau, use_plif)
 
         if self.visualize:
-            self.monitor = monitor.OutputMonitor(self, (neuron.LIFNode, neuron.ParametricLIFNode))
+            #self.monitor = monitor.OutputMonitor(self, (neuron.LIFNode, neuron.ParametricLIFNode))
+            self.output_monitor = monitor.OutputMonitor(self)
 
         functional.set_step_mode(self, step_mode='s')
 

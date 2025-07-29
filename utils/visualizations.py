@@ -139,9 +139,6 @@ def show_sample_triplet(input_seq, output_seq, label_seq, n=3, figsize=(6, 2.5))
     plt.tight_layout()
     return fig
 
-
-
-
 def visualize_predictions_video(
     model: torch.nn.Module,
     dataloader: torch.utils.data.DataLoader,
@@ -197,16 +194,16 @@ def visualize_predictions_video(
                 if all_timesteps:
                     for t in range(T - 1):
                         input_img = input_seq[t, b, 0].numpy()
-                        img_rgb = create_overlay_image(input_img, pred_img, label_img)
                         img_path = os.path.join(save_dir, f"frame_{idx:05d}.png")
-                        cv2.imwrite(img_path, img_rgb)
+                        cv2.imwrite(img_path, input_img)    # todo: untested
                         frame_paths.append(img_path)
                         idx += 1
 
                 input_img = input_seq[-1, b, 0].numpy()
-                img_rgb = create_overlay_image(input_img, pred_img, label_img)
                 img_path = os.path.join(save_dir, f"frame_{idx:05d}.png")
-                cv2.imwrite(img_path, img_rgb)
+                img_rgb = create_overlay_image(input_img, label_img, pred_img)
+                img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
+                cv2.imwrite(img_path, img_bgr)
                 frame_paths.append(img_path)
                 idx += 1
 
