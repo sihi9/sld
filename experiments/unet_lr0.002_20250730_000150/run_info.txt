@@ -1,0 +1,4 @@
+Started: 2025-07-30 00:01:50
+Device: auto
+AMP: False
+Description: Deep UNET with initial scaling

@@ -1,0 +1,4 @@
+Started: 2025-07-27 23:41:07
+Device: auto
+AMP: False
+Description: Baseline with shallow U-Net with recurrent bottleneck

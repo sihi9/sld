@@ -1,0 +1,43 @@
+data:
+  batch_size: 8
+  downscale: 4
+  label_smoothing:
+    background: 0.05
+    enabled: false
+    lane: 0.95
+  loader: det
+  num_workers: 4
+  use_poisson: false
+  use_static: false
+  used_T: 30
+defaults:
+  data: det
+  model: unet
+description: Semi deeper U-Net with non recurrent bottleneck and no conv recurrent
+  connections
+log:
+  vis_interval: 10
+model:
+  conv_recurrent: false
+  fc_bottleneck: true
+  fc_recurrent: false
+  features:
+  - 32
+  - 64
+  - 128
+  hidden_dim: 512
+  init_tau_decoder: 5.0
+  init_tau_encoder: 5.0
+  init_tau_recurrent: 15.0
+  initial_scaling: 1
+  name: unet
+  output_timesteps: 1
+  use_plif_decoder: true
+  use_plif_encoder: true
+  use_plif_recurrent: true
+train:
+  amp: false
+  device: auto
+  epochs: 100
+  lr: 0.001
+  save_intermediate: false

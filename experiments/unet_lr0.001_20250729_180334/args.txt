@@ -1,0 +1,1 @@
+Namespace(model='unet', data='det', train_lr=None, model_hidden_dim=None, model_features=[16, 32], model_fc_bottleneck=True, model_fc_recurrent=False, model_conv_recurrent=None, cfg_description='Shallow U-Net with non recurrent bottleneck', experiment_name=None, eval_only=False, checkpoint_type='final')

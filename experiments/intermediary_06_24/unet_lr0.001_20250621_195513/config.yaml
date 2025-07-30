@@ -1,0 +1,33 @@
+data:
+  batch_size: 16
+  downscale: 4
+  loader: det
+  num_workers: 2
+defaults:
+  data: det
+  model: unet
+description: 'Recurrent UNet training configuration
+
+  '
+log:
+  vis_interval: 10
+model:
+  features:
+  - 16
+  - 32
+  - 64
+  - 128
+  hidden_dim: 1024
+  init_tau: 20.0
+  name: unet
+  output_timesteps: 1
+  recurrent: true
+  use_plif_decoder: false
+  use_plif_encoder: false
+  use_plif_recurrent: true
+train:
+  amp: false
+  device: auto
+  epochs: 50
+  lr: 0.001
+  save_intermediate: false

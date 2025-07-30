@@ -1,0 +1,16 @@
+description: >
+  Default configuration
+
+defaults:
+  model: unet # base, unet or lanesnn
+  data: det # det, carla or demo
+
+train:
+  epochs: 200
+  lr: 0.002
+  amp: false
+  device: auto
+  save_intermediate: false
+
+log:
+  vis_interval: 20

@@ -1,0 +1,4 @@
+name: lanesnn
+hidden_dim: 600
+use_plif: false
+init_tau: 1.25

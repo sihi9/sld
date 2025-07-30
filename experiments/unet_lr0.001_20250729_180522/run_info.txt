@@ -1,0 +1,4 @@
+Started: 2025-07-29 18:05:22
+Device: auto
+AMP: False
+Description: Deeper U-Net with non recurrent bottleneck but recurrent conv

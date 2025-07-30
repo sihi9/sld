@@ -1,0 +1,4 @@
+Started: 2025-07-27 23:42:02
+Device: auto
+AMP: False
+Description: Deeper U-Net with no flat bottleneck

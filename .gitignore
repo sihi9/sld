@@ -59,4 +59,5 @@ Thumbs.db
 
 # images
 outputs/
-experiments/
+#experimentis/
+*.pth

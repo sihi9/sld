@@ -1,0 +1,4 @@
+Started: 2025-07-29 20:45:42
+Device: auto
+AMP: False
+Description: CARLA Semi deeper U-Net with non recurrent bottleneck and no conv recurrent connections

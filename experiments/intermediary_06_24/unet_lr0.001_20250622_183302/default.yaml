@@ -1,0 +1,16 @@
+description: >
+  Recurrent UNet training configuration with 10 timesteps
+
+defaults:
+  model: unet # base or unet
+  data: det   # det or demo
+
+train:
+  epochs: 50
+  lr: 0.001
+  amp: false
+  device: auto
+  save_intermediate: false
+
+log:
+  vis_interval: 10

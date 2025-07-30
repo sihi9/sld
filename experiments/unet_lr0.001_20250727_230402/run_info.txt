@@ -1,0 +1,5 @@
+Started: 2025-07-27 23:04:02
+Device: auto
+AMP: False
+Description: Recurrent bigger UNet training to compare with static
+

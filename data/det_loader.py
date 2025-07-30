@@ -158,13 +158,13 @@ class HDF5Dataset(Dataset):
                             crop_top : H2,
                             crop_left: W2 - crop_right]
         
-        if self.label_smoothing_enabled:
-            lab_ds = apply_label_smoothing(lab_ds, self.smooth_bg, self.smooth_lane)
-        
         # Convert to torch.Tensor
         x_tensor = torch.from_numpy(x_ds).float() / 255.0
         y_tensor = torch.from_numpy(lab_ds).float()
         
+        if self.label_smoothing_enabled:
+            y_tensor = apply_label_smoothing(y_tensor, self.smooth_bg, self.smooth_lane)
+            
         return x_tensor, y_tensor
 
     def close(self):

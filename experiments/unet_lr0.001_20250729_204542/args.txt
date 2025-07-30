@@ -1,0 +1,1 @@
+Namespace(model='unet', data='carla', train_lr=None, model_hidden_dim=None, model_features=[32, 64, 128], model_fc_bottleneck=True, model_fc_recurrent=False, model_conv_recurrent=False, cfg_description='CARLA Semi deeper U-Net with non recurrent bottleneck and no conv recurrent connections', experiment_name=None, eval_only=False, checkpoint_type='final')

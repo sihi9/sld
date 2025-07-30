@@ -1,0 +1,5 @@
+Started: 2025-06-22 18:33:02
+Device: auto
+AMP: False
+Description: Recurrent UNet training configuration with 10 timesteps
+

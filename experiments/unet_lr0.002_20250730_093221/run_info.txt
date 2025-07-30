@@ -1,0 +1,4 @@
+Started: 2025-07-30 09:32:22
+Device: auto
+AMP: False
+Description: Deep UNET with with no recurrencies and smaller tau

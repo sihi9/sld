@@ -1,0 +1,4 @@
+Started: 2025-07-30 00:02:02
+Device: auto
+AMP: False
+Description: Shallow UNET with initial scaling
