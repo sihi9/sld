@@ -6,7 +6,8 @@ import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-from .data_utils import apply_label_smoothing
+from data.data_utils import apply_label_smoothing
+
 
 def _downscale_frame(img: np.ndarray, factor: int) -> np.ndarray:
     """Downscale binary frame (0/255) with area then threshold to preserve binary."""
@@ -34,6 +35,13 @@ def _downscale_label(img: np.ndarray, factor: int) -> np.ndarray:
     # Now threshold — retain block if any lane pixels were present
     return (downscaled > 0.05).astype(np.uint8)  # OR use >0.05 to be stricter
 
+def apply_affine_transform(image, M, shape):
+    """Apply affine transform to a single-channel image with replicated borders."""
+    return cv2.warpAffine(image, M, (shape[1], shape[0]),
+                          flags=cv2.INTER_NEAREST,
+                          borderMode=cv2.BORDER_REPLICATE)
+
+
 
 class HDF5Dataset(Dataset):
     """
@@ -47,6 +55,7 @@ class HDF5Dataset(Dataset):
     """
     def __init__(self,
                  h5_path: str,
+                 is_test: bool = False,
                  downscale_factor: int = 1,
                  model_downscale: int = None,
                  model_initial_downscale: int = 1,
@@ -56,11 +65,13 @@ class HDF5Dataset(Dataset):
                  use_poisson=False,
                  label_smoothing_enabled=False,
                  smooth_bg=0.05,
-                 smooth_lane=0.95):
+                 smooth_lane=0.95,
+                 augmentation_intensity=0.1):
         """
         Initialize the dataset.
         Args:            
             h5_path: Path to the HDF5 file.
+            is_test: If True, will not apply augmentation.
             downscale_factor: Factor by which to downscale the frames and labels.
             model_downscale: Factor by which the model will downscale the frames.
             model_initial_downscale: Initial downscale factor of the model.
@@ -71,9 +82,11 @@ class HDF5Dataset(Dataset):
             label_smoothing_enabled: If True, will apply label smoothing.
             smooth_bg: Background label smoothing value.
             smooth_lane: Lane label smoothing value.
+            augmentation_intensity: Intensity of random affine transformations.
         """
         path_prefix = './data/DET/'  # Assuming data files are in a 'data' directory
         self.h5_path = path_prefix + h5_path
+        self.is_test = is_test
         self.downscale_factor = downscale_factor
         self.model_downscale = model_downscale
         self.model_initial_downscale = model_initial_downscale
@@ -84,6 +97,8 @@ class HDF5Dataset(Dataset):
         self.label_smoothing_enabled = label_smoothing_enabled
         self.smooth_bg = smooth_bg
         self.smooth_lane = smooth_lane
+        self.augmentation_intensity = augmentation_intensity
+
         
         # Open in read-only mode
         self._h5 = h5py.File(self.h5_path, 'r')
@@ -111,75 +126,150 @@ class HDF5Dataset(Dataset):
         real_idx = self.indices[idx]
         x_np = self._X[real_idx]  # (T,1,H,W)
         y_np = self._Y[real_idx]  # (1,H,W)
-        # Downscale each frame and label
-        # Convert to uint8 numpy
         T, C, H, W = x_np.shape
-        
+
         if self.used_T is not None and self.used_T < T:
-            x_np = x_np[-self.used_T:]  # Keep last `used_T` frames
+            x_np = x_np[-self.used_T:]
             T = self.used_T
-    
-        # Process frames
+
+        # Process input frames
         frames = []
-        
         if self.use_static:
-            # Use last frame only, repeated T times
-            img = x_np[-1, 0, :, :].astype(np.uint8)
+            img = x_np[-1, 0].astype(np.uint8)
             img_ds = _downscale_frame(img, self.downscale_factor)
             frames = [img_ds for _ in range(T)]
         else:
             for t in range(T):
-                img = x_np[t, 0, :, :].astype(np.uint8)
+                img = x_np[t, 0].astype(np.uint8)
                 img_ds = _downscale_frame(img, self.downscale_factor)
                 frames.append(img_ds)
-        
-        
+
         x_ds = np.stack(frames, axis=0)  # (T,H2,W2)
         x_ds = x_ds[:, np.newaxis, :, :]  # (T,1,H2,W2)
 
         # Process label
-        lab = (y_np[0] > 0).astype(np.uint8)    # make binary
+        lab = (y_np[0] > 0).astype(np.uint8)
         total_label_downscale = self.downscale_factor * self.model_initial_downscale
         lab_ds = _downscale_label(lab, total_label_downscale)
-        lab_ds = lab_ds[np.newaxis, :, :]  # (1,H2,W2)
+        lab_ds = lab_ds[np.newaxis, :, :]
 
-        # make sure the image can be fed into a U-Net model with 3 2x2 downscales
+        # === COMPUTE AUGMENTATION PARAMETERS ===
+        if self.augmentation_intensity > 0.0:
+            H2, W2 = x_ds.shape[-2], x_ds.shape[-1]
+            max_tx = self.augmentation_intensity * W2
+            max_angle_rad = np.arcsin(self.augmentation_intensity)
+            max_angle_deg = np.degrees(max_angle_rad)
+
+            crop_margin_h = int(H2 * self.augmentation_intensity)
+            crop_margin_w = int(W2 * self.augmentation_intensity)
+
+            self._max_tx = max_tx
+            self._max_angle = max_angle_deg
+            self._crop_margin_h = crop_margin_h
+            self._crop_margin_w = crop_margin_w
+        else:
+            self._max_tx = 0
+            self._max_angle = 0
+            self._crop_margin_h = 0
+            self._crop_margin_w = 0
+
+        # === AUGMENTATION ===
+        if not self.is_test:
+            x_ds, lab_ds = self._augment_sample(x_ds, lab_ds)
+
+        # === FINAL CROP FOR CONSISTENCY EVEN IF NOT AUGMENTED ===
+        if self.augmentation_intensity > 0.0:
+            ch, cw = self._crop_margin_h, self._crop_margin_w
+            x_ds = x_ds[:, :, ch:-ch, cw:-cw]
+
+            # compute label crop scaled to its resolution
+            ratio = self.downscale_factor * self.model_initial_downscale
+            ch_lab = ch // ratio
+            cw_lab = cw // ratio
+            lab_ds = lab_ds[:, ch_lab:-ch_lab, cw_lab:-cw_lab]
+            
+        # === POST-CROP MODEL COMPATIBILITY CHECK ===
         T, C, H2, W2 = x_ds.shape
-        rem_h = (H2 % self.model_downscale) if self.model_downscale is not None else 0
-        rem_w = (W2 % self.model_downscale) if self.model_downscale is not None else 0
-        
+        rem_h = (H2 % self.model_downscale) if self.model_downscale else 0
+        rem_w = (W2 % self.model_downscale) if self.model_downscale else 0
+
         if rem_h != 0 or rem_w != 0:
             crop_top = rem_h
             crop_left = rem_w // 2
             crop_right = rem_w - crop_left
 
-            # Crop input (x_ds) at full resolution
-            x_ds = x_ds[:, :, 
-                        crop_top : H2,
-                        crop_left : W2 - crop_right]
+            x_ds = x_ds[:, :, crop_top:H2, crop_left:W2 - crop_right]
 
-            # Crop label (lab_ds) with scaled indices
             label_crop_top = crop_top // self.model_initial_downscale
             label_crop_left = crop_left // self.model_initial_downscale
             label_crop_right = crop_right // self.model_initial_downscale
             _, H_lab, W_lab = lab_ds.shape
 
-            lab_ds = lab_ds[:,
-                            label_crop_top : H_lab,
-                            label_crop_left : W_lab - label_crop_right]
-        
-        # Convert to torch.Tensor
+            lab_ds = lab_ds[:, label_crop_top:H_lab, label_crop_left:W_lab - label_crop_right]
+
+        # === TO TENSOR ===
         x_tensor = torch.from_numpy(x_ds).float() / 255.0
         y_tensor = torch.from_numpy(lab_ds).float()
-        
+
         if self.label_smoothing_enabled:
             y_tensor = apply_label_smoothing(y_tensor, self.smooth_bg, self.smooth_lane)
-            
+
         return x_tensor, y_tensor
+
 
     def close(self):
         """Close the underlying HDF5 file."""
         self._h5.close()
+
+    def _augment_sample(self, x_seq, label):
+        """
+        Applies rotation or shift to x_seq and label, taking into account different resolutions.
+        Args:
+            x_seq: shape (T, 1, H, W)
+            label: shape (1, H_lab, W_lab)
+        Returns:
+            Augmented x_seq and label
+        """
+        T, _, H, W = x_seq.shape
+        _, H_lab, W_lab = label.shape
+
+        # Randomly select transformation
+        choice = np.random.choice(['rotate', 'shift', 'none'])
+
+        angle = np.random.uniform(-self._max_angle, self._max_angle) if choice == 'rotate' else 0
+        tx = np.random.uniform(-self._max_tx, self._max_tx) if choice == 'shift' else 0
+
+        # Transformation matrix for input frames
+        center = (W // 2, H // 2)
+        M_frame = cv2.getRotationMatrix2D(center, angle, 1.0)
+        M_frame[:, 2] += [tx, 0]
+
+        # Apply to frames
+        x_aug = np.zeros_like(x_seq)
+        for t in range(T):
+            x_aug[t, 0] = cv2.warpAffine(
+                x_seq[t, 0], M_frame, (W, H),
+                flags=cv2.INTER_NEAREST,
+                borderMode=cv2.BORDER_REPLICATE
+            )
+
+        # === Adjust transformation matrix for label scale
+        scale_w = W_lab / W
+        scale_h = H_lab / H
+        M_label = M_frame.copy()
+        M_label[0, :] *= scale_w
+        M_label[1, :] *= scale_h
+
+        # Apply to label
+        label_aug = np.zeros_like(label)
+        label_aug[0] = cv2.warpAffine(
+            label[0], M_label, (W_lab, H_lab),
+            flags=cv2.INTER_NEAREST,
+            borderMode=cv2.BORDER_REPLICATE
+        )
+
+        return x_aug, label_aug
+
 
     def __del__(self):
         try:
@@ -199,7 +289,8 @@ class MultiHDF5Dataset(Dataset):
                  use_poisson=False,
                  label_smoothing_enabled=False,
                  smooth_bg=0.05,
-                 smooth_lane=0.95):
+                 smooth_lane=0.95,
+                 augmentation_intensity=0.1):
         """
         Dataset that combines multiple HDF5 files.
         Args:
@@ -214,9 +305,11 @@ class MultiHDF5Dataset(Dataset):
             label_smoothing_enabled: If True, will apply label smoothing.
             smooth_bg: Background label smoothing value.
             smooth_lane: Lane label smoothing value.
+            augmentation_intensity: Intensity of random affine transformations.
         """
         self.datasets = [
             HDF5Dataset(h5_path=path,
+                        is_test=False,  # Default for multi-dataset so far
                         downscale_factor=downscale_factor,
                         model_downscale=model_downscale,
                         model_initial_downscale=model_initial_downscale,
@@ -226,7 +319,8 @@ class MultiHDF5Dataset(Dataset):
                         use_poisson=use_poisson,
                         label_smoothing_enabled=label_smoothing_enabled,
                         smooth_bg=smooth_bg,
-                        smooth_lane=smooth_lane)
+                        smooth_lane=smooth_lane,
+                        augmentation_intensity=augmentation_intensity)
             for path in h5_paths
         ]
         self.cumulative_lengths = np.cumsum([len(ds) for ds in self.datasets])
@@ -254,6 +348,7 @@ def build_det_dataloaders(batch_size=4,
                           label_smoothing_enabled=False,
                           smooth_bg=0.05,
                           smooth_lane=0.95,
+                          augmentation_intesity=0.1,
                           train_split=0.8,
                           seed=42,
                           shuffle=True,
@@ -271,6 +366,7 @@ def build_det_dataloaders(batch_size=4,
         label_smoothing_enabled: If True, will apply label smoothing.
         smooth_bg: Background label smoothing value.
         smooth_lane: Lane label smoothing value.
+        augmentation_intensity: Intensity of random affine transformations.
         train_split: Fraction of data to use for training (0.8 means 80% train, 20% val).
         seed: Random seed for reproducibility.
         shuffle: Whether to shuffle the training data.
@@ -294,6 +390,7 @@ def build_det_dataloaders(batch_size=4,
         label_smoothing_enabled=label_smoothing_enabled,
         smooth_bg=smooth_bg,
         smooth_lane=smooth_lane,
+        augmentation_intensity=augmentation_intesity
     )
 
     total_size = len(dataset)
@@ -305,6 +402,7 @@ def build_det_dataloaders(batch_size=4,
     # Build dataset for testing
     test_dataset = HDF5Dataset(
         h5_path=test_file,
+        is_test=True,  # Test dataset does not use augmentation
         downscale_factor=downscale_factor,
         model_downscale=model_downscale,
         model_initial_downscale=model_initial_downscale,
@@ -314,6 +412,7 @@ def build_det_dataloaders(batch_size=4,
         label_smoothing_enabled=label_smoothing_enabled,
         smooth_bg=smooth_bg,
         smooth_lane=smooth_lane,
+        augmentation_intensity=augmentation_intesity
     )
 
     return {
@@ -394,11 +493,11 @@ def test_time():
 # Example usage guard
 if __name__ == '__main__':
     # Quick test
-    test_time()
-    # loader = build_det_dataloaders(downscale_factor=4, shuffle=False)["train"]
+    # test_time()
+    loader = build_det_dataloaders(downscale_factor=1, shuffle=False, augmentation_intesity=0.05)["train"]
     
-    # for x, y in loader:
-    #     print("Input:", x.shape)  
-    #     print("Label:", y.shape)
-    #     plot_sample_sequence(x, y, history=1)
-    #     break
+    for x, y in loader:
+        print("Input:", x.shape)  
+        print("Label:", y.shape)
+        plot_sample_sequence(x, y, history=1, save_path='./sample_sequence.png', show=False)
+        break

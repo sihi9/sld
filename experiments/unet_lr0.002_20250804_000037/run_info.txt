@@ -1,0 +1,4 @@
+Started: 2025-08-04 00:00:37
+Device: auto
+AMP: False
+Description: deep small non recurrent with data augmentation

@@ -5,11 +5,11 @@
 sbatch run_snn.sh \
     --model unet \
     --data det \
-    --description "deep small non-recurrent unet with small tau and initial scaling" \
-    --features 8 16 32 48\
+    --description "deep small fully recurrent with data augmentation" \
+    --features 8 16 24 32\
     --fc-bottleneck \
-    --no-fc-recurrent \
-    --no-conv-recurrent \
+    --fc-recurrent \
+    --conv-recurrent \
     
 
 

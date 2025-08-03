@@ -58,13 +58,20 @@ def apply_missing_defaults(cfg):
     # Defaults for model section
     model_defaults = {
         "initial_scaling": 1,
-        
         "conv_recurrent": False,
+    }
+    
+    data_defaults = {
+        "augmentation_intensity": 0.0,
     }
 
     for key, value in model_defaults.items():
         if not hasattr(cfg.model, key):
             setattr(cfg.model, key, value)
+            
+    for key, value in data_defaults.items():
+        if not hasattr(cfg.data, key):
+            setattr(cfg.data, key, value)
 
     # Similarly, add defaults for other sections if needed
     return cfg

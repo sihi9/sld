@@ -65,6 +65,7 @@ class DataModule:
                 label_smoothing_enabled=data_cfg.label_smoothing.enabled,
                 smooth_bg=data_cfg.label_smoothing.background,
                 smooth_lane=data_cfg.label_smoothing.lane,
+                augmentation_intesity=data_cfg.augmentation_intensity,
                 train_split=0.8 
             )
         elif data_cfg.loader == "carla":

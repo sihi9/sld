@@ -9,4 +9,3 @@ label_smoothing:
     enabled: true
     background: 0.05
     lane: 0.95
-augmentation_intensity: 0.1
