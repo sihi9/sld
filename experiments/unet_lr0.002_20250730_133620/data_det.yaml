@@ -1,7 +1,7 @@
 loader: det
-batch_size: 8
+batch_size: 16
 num_workers: 4
-downscale: 1
+downscale: 4
 used_T: 30
 use_static: false
 use_poisson: false

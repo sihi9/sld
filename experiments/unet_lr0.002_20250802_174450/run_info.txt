@@ -1,0 +1,4 @@
+Started: 2025-08-02 17:44:50
+Device: auto
+AMP: False
+Description: deep small non-recurrent unet with small tau and initial scaling

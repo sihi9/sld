@@ -3,13 +3,13 @@
 
 # EXP5
 sbatch run_snn.sh \
-    --model lanesnn \
+    --model unet \
     --data det \
-    --description "LaneSNN with 200 Epochs" \
-    #--features 16 32\
-    #--fc-bottleneck \
-    #--no-fc-recurrent \
-    #--no-conv-recurrent \
+    --description "deep small non-recurrent unet with small tau and initial scaling" \
+    --features 8 16 32 48\
+    --fc-bottleneck \
+    --no-fc-recurrent \
+    --no-conv-recurrent \
     
 
 

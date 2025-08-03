@@ -1,0 +1,4 @@
+Started: 2025-07-30 13:38:02
+Device: auto
+AMP: False
+Description: deep unet with less channels full recurrent

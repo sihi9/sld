@@ -49,6 +49,7 @@ class HDF5Dataset(Dataset):
                  h5_path: str,
                  downscale_factor: int = 1,
                  model_downscale: int = None,
+                 model_initial_downscale: int = 1,
                  filter_fn=None,
                  used_T = None,
                  use_static=False,
@@ -58,8 +59,11 @@ class HDF5Dataset(Dataset):
                  smooth_lane=0.95):
         """
         Initialize the dataset.
-        Args:            h5_path: Path to the HDF5 file.
+        Args:            
+            h5_path: Path to the HDF5 file.
             downscale_factor: Factor by which to downscale the frames and labels.
+            model_downscale: Factor by which the model will downscale the frames.
+            model_initial_downscale: Initial downscale factor of the model.
             filter_fn: Optional function to filter samples based on input and label.
             used_T: If specified, only the last `used_T` frames will  be used.
             use_static: If True, will only use last frame.
@@ -72,6 +76,7 @@ class HDF5Dataset(Dataset):
         self.h5_path = path_prefix + h5_path
         self.downscale_factor = downscale_factor
         self.model_downscale = model_downscale
+        self.model_initial_downscale = model_initial_downscale
         self.filter_fn = filter_fn
         self.used_T = used_T
         self.use_static = use_static
@@ -134,29 +139,34 @@ class HDF5Dataset(Dataset):
 
         # Process label
         lab = (y_np[0] > 0).astype(np.uint8)    # make binary
-        lab_ds = _downscale_label(lab, self.downscale_factor)
+        total_label_downscale = self.downscale_factor * self.model_initial_downscale
+        lab_ds = _downscale_label(lab, total_label_downscale)
         lab_ds = lab_ds[np.newaxis, :, :]  # (1,H2,W2)
 
         # make sure the image can be fed into a U-Net model with 3 2x2 downscales
         T, C, H2, W2 = x_ds.shape
-        rem_h = H2 % self.model_downscale if self.model_downscale is not None else 1
-        rem_w = W2 % self.model_downscale if self.model_downscale is not None else 1
+        rem_h = (H2 % self.model_downscale) if self.model_downscale is not None else 0
+        rem_w = (W2 % self.model_downscale) if self.model_downscale is not None else 0
         
         if rem_h != 0 or rem_w != 0:
-            # Crop the top because its less relevant
             crop_top = rem_h
-            
-            # split width cropping
-            crop_left  = rem_w // 2
+            crop_left = rem_w // 2
             crop_right = rem_w - crop_left
 
-            # apply to both data and label
-            x_ds = x_ds[:, :,
+            # Crop input (x_ds) at full resolution
+            x_ds = x_ds[:, :, 
                         crop_top : H2,
-                        crop_left: W2 - crop_right]
+                        crop_left : W2 - crop_right]
+
+            # Crop label (lab_ds) with scaled indices
+            label_crop_top = crop_top // self.model_initial_downscale
+            label_crop_left = crop_left // self.model_initial_downscale
+            label_crop_right = crop_right // self.model_initial_downscale
+            _, H_lab, W_lab = lab_ds.shape
+
             lab_ds = lab_ds[:,
-                            crop_top : H2,
-                            crop_left: W2 - crop_right]
+                            label_crop_top : H_lab,
+                            label_crop_left : W_lab - label_crop_right]
         
         # Convert to torch.Tensor
         x_tensor = torch.from_numpy(x_ds).float() / 255.0
@@ -182,6 +192,7 @@ class MultiHDF5Dataset(Dataset):
                  h5_paths, 
                  downscale_factor=1, 
                  model_downscale=None,
+                 model_initial_downscale=1,
                  filter_fn=None, 
                  used_T=None,
                  use_static=False,
@@ -194,6 +205,8 @@ class MultiHDF5Dataset(Dataset):
         Args:
             h5_paths: List of paths to HDF5 files.
             downscale_factor: Factor by which to downscale the frames and labels.
+            model_downscale: Factor by which the model will downscale the frames.
+            model_initial_downscale: Initial downscale factor of the model.
             filter_fn: Optional function to filter samples based on input and label.
             used_T: If specified, only the last `used_T` frames will be used.
             use_static: If True, will only use last frame.
@@ -206,6 +219,7 @@ class MultiHDF5Dataset(Dataset):
             HDF5Dataset(h5_path=path,
                         downscale_factor=downscale_factor,
                         model_downscale=model_downscale,
+                        model_initial_downscale=model_initial_downscale,
                         filter_fn=filter_fn,
                         used_T=used_T,
                         use_static=use_static,
@@ -233,6 +247,7 @@ def build_det_dataloaders(batch_size=4,
                           num_workers=0, 
                           downscale_factor=1,
                           model_downscale=8,
+                          model_initial_downscale=1,
                           used_T=None,
                           use_static=False,
                           use_poisson=False,
@@ -272,6 +287,7 @@ def build_det_dataloaders(batch_size=4,
         h5_paths=train_val_files,
         downscale_factor=downscale_factor,
         model_downscale=model_downscale,
+        model_initial_downscale=model_initial_downscale,
         used_T=used_T,
         use_static=use_static,
         use_poisson=use_poisson,
@@ -291,6 +307,7 @@ def build_det_dataloaders(batch_size=4,
         h5_path=test_file,
         downscale_factor=downscale_factor,
         model_downscale=model_downscale,
+        model_initial_downscale=model_initial_downscale,
         used_T=used_T,
         use_static=use_static,
         use_poisson=use_poisson,

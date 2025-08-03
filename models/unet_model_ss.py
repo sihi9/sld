@@ -1,4 +1,5 @@
 import torch
+import math
 import torch.nn as nn
 from spikingjelly.activation_based import layer, neuron, surrogate, functional, monitor
 from .LINode import LeakyIntegrator
@@ -65,33 +66,22 @@ class SpikingUNetRNN(nn.Module):
             assert len(features) >= 2, "conv_recurrent requires at least two encoder layers"
 
         if self.initial_scaling is not None and self.initial_scaling > 1:
-            self.downscale = layer.Conv2d(
+            self.initial_down_block = InitialDownscaleBlock(
                 in_channels=in_channels,
-                out_channels=in_channels,
-                kernel_size=self.initial_scaling,
-                stride=self.initial_scaling,
-                padding=0,
-                bias=False
+                scaling_factor=self.initial_scaling,
+                use_plif=self.use_plif_encoder,
+                init_tau=self.init_tau_encoder
             )
-            self.upscale = nn.ConvTranspose2d(
-                in_channels=out_channels,
-                out_channels=out_channels,
-                kernel_size=self.initial_scaling,
-                stride=self.initial_scaling,
-                padding=0,
-                bias=False
-            )
+            prev_channels = self.initial_down_block.out_channels
         else:
-            print("No initial scaling applied")
-            self.downscale = None
-            self.upscale = None
-            
+            print("No initial downscaling block used")
+            self.initial_down_block = None
+            prev_channels = in_channels
 
-        # Encoder path
+            # Encoder path
         self.encoders = nn.ModuleList()
         self.pools = nn.ModuleList()
         
-        prev_channels = in_channels
         for i, feat in enumerate(features[:-1]):           
             self.encoders.append(self.double_conv(prev_channels, feat, init_tau_encoder, use_plif_encoder))
             self.pools.append(layer.MaxPool2d(kernel_size=2, stride=2))
@@ -119,13 +109,13 @@ class SpikingUNetRNN(nn.Module):
             print(f"Using fully connected bottleneck with hidden_dim={hidden_dim} and flat_dim={flat_dim}")
             if self.fc_recurrent:
                 self.bottleneck_neuron = layer.LinearRecurrentContainer(
-                    self._make_neuron(init_tau_recurrent, use_plif=use_plif_recurrent),
+                    _make_neuron(init_tau_recurrent, use_plif=use_plif_recurrent),
                     in_features=hidden_dim,
                     out_features=hidden_dim,
                     bias=True
                 )
             else:
-                self.bottleneck_neuron = self._make_neuron(init_tau=init_tau_recurrent, use_plif=use_plif_recurrent)
+                self.bottleneck_neuron = _make_neuron(init_tau=init_tau_recurrent, use_plif=use_plif_recurrent)
 
             self.expand_fc = layer.Linear(hidden_dim, flat_dim, bias=False, step_mode='m')
 
@@ -200,8 +190,8 @@ class SpikingUNetRNN(nn.Module):
         skips = []
         feedback = self._recurrent_feedback if self.conv_recurrent else None
 
-        if self.downscale is not None:
-            x = self.downscale(x)
+        if self.initial_down_block is not None:
+            x = self.initial_down_block(x)
             
         # Concatenate recurrent feedback if enabled
         if self.conv_recurrent:
@@ -244,8 +234,7 @@ class SpikingUNetRNN(nn.Module):
         x = self.final_conv(x)
         _ = self.output_integrator(x)
         v = self.output_integrator.v  # [B, 1, H, W]
-        if self.upscale is not None:
-            v = self.upscale(v)
+
         return v    
         
 
@@ -265,13 +254,6 @@ class SpikingUNetRNN(nn.Module):
         return v_out
 
     
-    
-    def _make_neuron(self, init_tau = 5.0, use_plif=False):
-        if use_plif:
-            return neuron.ParametricLIFNode(init_tau=init_tau, surrogate_function=surrogate.ATan()) 
-        else:
-            return neuron.LIFNode(surrogate_function=surrogate.ATan())
-
     def double_conv(self, in_channels, out_channels, init_tau = 5.0, use_plif=False):
         """
         Helper to create two spiking convolutional layers with batchnorm and LIF/PLIF neurons,
@@ -280,8 +262,44 @@ class SpikingUNetRNN(nn.Module):
         return nn.Sequential(
             layer.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
             layer.BatchNorm2d(out_channels),
-            self._make_neuron(init_tau=init_tau, use_plif=use_plif),
+            _make_neuron(init_tau=init_tau, use_plif=use_plif),
             layer.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
             layer.BatchNorm2d(out_channels),
-            self._make_neuron(init_tau=init_tau, use_plif=use_plif)
+            _make_neuron(init_tau=init_tau, use_plif=use_plif)
         )
+
+@staticmethod
+def _make_neuron(init_tau = 5.0, use_plif=False):
+    if use_plif:
+        return neuron.ParametricLIFNode(init_tau=init_tau, surrogate_function=surrogate.ATan()) 
+    else:
+        return neuron.LIFNode(surrogate_function=surrogate.ATan())
+        
+        
+class InitialDownscaleBlock(nn.Module):
+    def __init__(self, in_channels, scaling_factor, use_plif=False, init_tau=5.0):
+        super().__init__()
+
+        if scaling_factor < 4 or (scaling_factor & (scaling_factor - 1)) != 0 or int(math.log2(scaling_factor)) % 2 != 0:
+            raise ValueError(f"scaling_factor must be a power of 4 (e.g. 4, 16), got {scaling_factor}")
+
+        steps = int(math.log2(scaling_factor) // 2)
+        layers = []
+        current_channels = in_channels
+
+        for _ in range(steps):
+            layers += [
+                layer.Conv2d(current_channels, 4, kernel_size=5, stride=2, padding=2, bias=False),
+                layer.BatchNorm2d(4),
+                neuron.ParametricLIFNode(init_tau=init_tau, surrogate_function=surrogate.ATan()) if use_plif 
+                else neuron.LIFNode(init_tau=init_tau, surrogate_function=surrogate.ATan()),
+                layer.MaxPool2d(kernel_size=2, stride=2)
+            ]
+            current_channels = 4
+
+        self.down_block = nn.Sequential(*layers)
+        self.out_channels = current_channels
+        self.scaling = scaling_factor
+
+    def forward(self, x):
+        return self.down_block(x)

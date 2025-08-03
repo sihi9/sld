@@ -1,0 +1,4 @@
+Started: 2025-07-30 13:39:53
+Device: auto
+AMP: False
+Description: deep unet fulyl recurrent

@@ -58,6 +58,7 @@ def apply_missing_defaults(cfg):
     # Defaults for model section
     model_defaults = {
         "initial_scaling": 1,
+        
         "conv_recurrent": False,
     }
 

@@ -88,6 +88,13 @@ def create_overlay_image(
 
     input_rgb = np.stack([input_img] * 3, axis=-1)  # shape (H, W, 3)
 
+    H, W = input_img.shape
+    if label_img.shape != (H, W):
+        label_img = cv2.resize(label_img, (W, H), interpolation=cv2.INTER_NEAREST)
+    if pred_img.shape != (H, W):
+        pred_img = cv2.resize(pred_img, (W, H), interpolation=cv2.INTER_NEAREST)
+
+
     # Binary masks
     y_mask = label_img > 0.5
     p_mask = pred_img > 0.5
