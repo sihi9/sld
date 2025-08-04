@@ -1,4 +1,0 @@
-Started: 2025-08-04 09:37:12
-Device: auto
-AMP: False
-Description: deep small non recurrent with inital scaling

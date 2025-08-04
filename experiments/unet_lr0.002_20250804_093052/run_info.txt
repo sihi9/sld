@@ -1,5 +1,0 @@
-Started: 2025-08-04 09:30:52
-Device: auto
-AMP: False
-Description: Shallow with label smoothing
-

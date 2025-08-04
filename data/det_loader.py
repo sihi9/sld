@@ -163,6 +163,10 @@ class HDF5Dataset(Dataset):
 
             crop_margin_h = int(H2 * self.augmentation_intensity)
             crop_margin_w = int(W2 * self.augmentation_intensity)
+            
+            # Make sure label can be croped correctly as well
+            crop_margin_h -= crop_margin_h % self.model_initial_downscale
+            crop_margin_w -= crop_margin_w % self.model_initial_downscale
 
             self._max_tx = max_tx
             self._max_angle = max_angle_deg
@@ -182,7 +186,6 @@ class HDF5Dataset(Dataset):
         if self.augmentation_intensity > 0.0:
             ch, cw = self._crop_margin_h, self._crop_margin_w
             x_ds = x_ds[:, :, ch:-ch, cw:-cw]
-
             # compute label crop scaled to its resolution
             ratio = self.downscale_factor * self.model_initial_downscale
             ch_lab = ch // ratio
@@ -271,7 +274,6 @@ class HDF5Dataset(Dataset):
             flags=cv2.INTER_NEAREST,
             borderMode=cv2.BORDER_REPLICATE
         )
-
 
         return x_aug, label_aug
 
