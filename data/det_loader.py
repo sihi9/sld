@@ -100,6 +100,7 @@ class HDF5Dataset(Dataset):
         self.smooth_lane = smooth_lane
         self.augmentation_intensity = augmentation_intensity
 
+        self.preload = True  # todo: make this configurable
         
         # Open in read-only mode
         self._h5 = h5py.File(self.h5_path, 'r')
@@ -120,10 +121,36 @@ class HDF5Dataset(Dataset):
                     valid.append(idx)
             self.indices = valid
 
+        if self.preload:
+            print(f"Preloading dataset {h5_path} into memory...")
+            self._cached_data = []
+            for i in range(len(self)):
+                self._cached_data.append(self._load_and_process_item(i))
+                
     def __len__(self):
         return len(self.indices)
 
     def __getitem__(self, idx):
+        """
+        Get item by index.
+        Args:
+            idx: Index of the item to retrieve.
+        Returns:
+            Tuple of input tensor and label tensor.
+        """
+        if hasattr(self, "_cached_data"):
+            return self._cached_data[idx]
+        
+        return self._load_and_process_item(idx)
+
+    def _load_and_process_item(self, idx):
+        """
+        Load and preprocess a single item from the dataset.
+        Args:
+            idx: Index of the item to load.
+        Returns:
+            Processed input and label tensors.
+        """
         real_idx = self.indices[idx]
         x_np = self._X[real_idx]  # (T,1,H,W)
         y_np = self._Y[real_idx]  # (1,H,W)
@@ -219,7 +246,6 @@ class HDF5Dataset(Dataset):
             y_tensor = apply_label_smoothing(y_tensor, self.smooth_bg, self.smooth_lane)
 
         return x_tensor, y_tensor
-
 
     def close(self):
         """Close the underlying HDF5 file."""
