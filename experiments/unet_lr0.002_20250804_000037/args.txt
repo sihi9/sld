@@ -1,1 +1,0 @@
-Namespace(model='unet', data='det', train_lr=None, model_hidden_dim=None, model_features=[8, 16, 24, 32], model_fc_bottleneck=True, model_fc_recurrent=False, model_conv_recurrent=False, cfg_description='deep small non recurrent with data augmentation', experiment_name=None, eval_only=False, checkpoint_type='final')

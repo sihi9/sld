@@ -2,12 +2,13 @@ import os
 import h5py
 import numpy as np
 import cv2
+from PIL import Image
 import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from data.data_utils import apply_label_smoothing
-
+from utils.visualizations import show_sample_triplet
 
 def _downscale_frame(img: np.ndarray, factor: int) -> np.ndarray:
     """Downscale binary frame (0/255) with area then threshold to preserve binary."""
@@ -177,7 +178,7 @@ class HDF5Dataset(Dataset):
         if not self.is_test:
             x_ds, lab_ds = self._augment_sample(x_ds, lab_ds)
 
-        # === FINAL CROP FOR CONSISTENCY EVEN IF NOT AUGMENTED ===
+        # === FINAL CROP FOR CONSISTENCY EVEN IF NOT AUGMENTED (Test set) ===
         if self.augmentation_intensity > 0.0:
             ch, cw = self._crop_margin_h, self._crop_margin_w
             x_ds = x_ds[:, :, ch:-ch, cw:-cw]
@@ -254,11 +255,14 @@ class HDF5Dataset(Dataset):
             )
 
         # === Adjust transformation matrix for label scale
+            # Adjust matrix for label space
         scale_w = W_lab / W
         scale_h = H_lab / H
-        M_label = M_frame.copy()
-        M_label[0, :] *= scale_w
-        M_label[1, :] *= scale_h
+
+        # Scale center accordingly
+        center_lab = (W_lab / 2, H_lab / 2)
+        M_label = cv2.getRotationMatrix2D(center_lab, angle, 1.0)
+        M_label[:, 2] += [tx * scale_w, 0]  # Scale tx as well
 
         # Apply to label
         label_aug = np.zeros_like(label)
@@ -267,6 +271,7 @@ class HDF5Dataset(Dataset):
             flags=cv2.INTER_NEAREST,
             borderMode=cv2.BORDER_REPLICATE
         )
+
 
         return x_aug, label_aug
 
@@ -421,24 +426,33 @@ def build_det_dataloaders(batch_size=4,
         "test": DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     }
 
+
 def plot_sample_sequence(inputs, labels, history=10, save_path=None, show=True):
     """
     Visualize a sequence of frames with label in last frame
     Args:
         inputs: [B, T, C, H, W] 
-        labes: [B, 1, H, W]
+        labels: [B, 1, H, W]
         history: Number of frames to show from the end of the sequence
         save_path: Path to save the figure, if None, will not save
         show: If True, will show the figure, otherwise will just close it
     """
     # Squeeze channel dimension
-    x_seq = inputs[0, :, 0, :, :]   
-    y = labels[0, 0, :, :]
+    x_seq = inputs[0, :, 0, :, :]   # [T, H_in, W_in]
+    y = labels[0, 0, :, :]          # [H_lab, W_lab]
+
+    # Resize label to match input shape if necessary
+    H_in, W_in = x_seq.shape[1:]
+    H_lab, W_lab = y.shape
+    if (H_in != H_lab) or (W_in != W_lab):
+        y_img = Image.fromarray(y.cpu().numpy().astype(np.uint8))
+        y_resized = y_img.resize((W_in, H_in), resample=Image.NEAREST)
+        y = np.array(y_resized)
+
     # Create boolean mask for label overlay
     mask = (y != 0)
 
     T = x_seq.shape[0]
-    
     if T > history:
         seq = x_seq[-history:]
     else:
@@ -446,10 +460,8 @@ def plot_sample_sequence(inputs, labels, history=10, save_path=None, show=True):
     n = seq.shape[0]
 
     # Dynamically adjust figure size
-    # Each frame column approx 2 inches, but minimum width 6 inches
     fig_width = max(n * 2.5, 8)
     fig_height = 4
-    # Set up figure: single row with n columns, last column wider
     width_ratios = [1] * (n - 1) + [2]
     fig = plt.figure(figsize=(fig_width, fig_height))
     gs = gridspec.GridSpec(
@@ -462,7 +474,6 @@ def plot_sample_sequence(inputs, labels, history=10, save_path=None, show=True):
         ax = fig.add_subplot(gs[0, i])
         ax.imshow(seq[i], cmap='gray', vmin=0, vmax=1)
         if i == n - 1:
-            # Create RGBA overlay: transparent background, red where mask True
             H, W = y.shape
             overlay = np.zeros((H, W, 4), dtype=float)
             overlay[mask, 0] = 1.0  # red channel
@@ -479,7 +490,6 @@ def plot_sample_sequence(inputs, labels, history=10, save_path=None, show=True):
     else:
         plt.close()
         
-        
 def test_time():
     import time
     loader = build_det_dataloaders(num_workers=4, downscale_factor=4, shuffle=False)["train"]
@@ -494,7 +504,11 @@ def test_time():
 if __name__ == '__main__':
     # Quick test
     # test_time()
-    loader = build_det_dataloaders(downscale_factor=1, shuffle=False, augmentation_intesity=0.05)["train"]
+    loader = build_det_dataloaders(downscale_factor=1,
+                                   model_initial_downscale=4,
+                                   model_downscale=4, 
+                                   shuffle=False, 
+                                   augmentation_intesity=0.05)["train"]
     
     for x, y in loader:
         print("Input:", x.shape)  

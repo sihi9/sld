@@ -14,13 +14,15 @@ data:
 defaults:
   data: det
   model: unet
-description: deep small non recurrent with data augmentation
+description: 'Shallow with label smoothing
+
+  '
 log:
   vis_interval: 20
 model:
   conv_recurrent: false
   fc_bottleneck: true
-  fc_recurrent: false
+  fc_recurrent: true
   features:
   - 8
   - 16

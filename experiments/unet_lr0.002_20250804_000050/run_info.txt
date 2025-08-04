@@ -1,4 +1,0 @@
-Started: 2025-08-04 00:00:50
-Device: auto
-AMP: False
-Description: deep small fully recurrent with data augmentation
