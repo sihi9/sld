@@ -1,0 +1,4 @@
+Started: 2025-08-04 19:21:17
+Device: auto
+AMP: False
+Description: deep middle fully recurrent with inital scaling and augementation

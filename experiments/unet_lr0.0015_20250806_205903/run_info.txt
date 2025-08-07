@@ -1,0 +1,4 @@
+Started: 2025-08-06 20:59:03
+Device: auto
+AMP: False
+Description: deep big everything

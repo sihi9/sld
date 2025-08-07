@@ -1,0 +1,4 @@
+Started: 2025-08-05 17:55:44
+Device: auto
+AMP: False
+Description: deep small fully recurrent with initial scale smoothing and augmentation

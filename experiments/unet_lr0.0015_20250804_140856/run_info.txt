@@ -1,0 +1,4 @@
+Started: 2025-08-04 14:08:56
+Device: auto
+AMP: False
+Description: deep small recurrent with inital scaling and augementation

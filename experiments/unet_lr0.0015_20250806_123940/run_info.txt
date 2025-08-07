@@ -1,0 +1,4 @@
+Started: 2025-08-06 12:39:40
+Device: auto
+AMP: False
+Description: deep medium fully recurrent
