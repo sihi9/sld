@@ -74,9 +74,13 @@ class DataModule:
                 batch_size=data_cfg.batch_size,
                 num_workers=data_cfg.num_workers,
                 downscale_factor=data_cfg.downscale,
+                model_downscale=total_model_downscale,
+                model_initial_downscale=initial_scaling,
                 used_T=data_cfg.used_T,
                 use_static=data_cfg.use_static,
-                train_split=0.8 
+                label_smoothing_enabled=data_cfg.label_smoothing.enabled,
+                smooth_bg=data_cfg.label_smoothing.background,
+                smooth_lane=data_cfg.label_smoothing.lane,
             )
 
         else:

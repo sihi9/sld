@@ -1,12 +1,12 @@
 description: >
-  Shallow with label smoothing
+  Carla Deep medium fully recurrent with label smoothing
 
 defaults:
   model: unet # base, unet or lanesnn
-  data: det # det, carla or demo
+  data: carla # det, carla or demo
 
 train:
-  epochs: 200
+  epochs: 100
   lr: 0.0015
   amp: false
   device: auto

@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=snn                   # Name of your job
-#SBATCH --partition=IMLcuda1             # GPU partition
-#SBATCH --nodelist=nodeicuda1            # Specific node
-#SBATCH --gres=gpu:RTX4000Ada:1          # Request 1 GPU
-#SBATCH --time=12:00:00                  # Max wall time
+#SBATCH --partition=IMLcuda3             # GPU partition
+#SBATCH --nodelist=nodeicuda3            # Specific node
+#SBATCH --gres=gpu:1          # Request 1 GPU
+#SBATCH --time=23:59:00                  # Max wall time
 #SBATCH --output=logs/snn_job_%j.out     # Stdout + stderr log file (%j = job ID)
 
 # Load conda (adjust if needed for your setup)
