@@ -17,6 +17,8 @@ class SpikingUNetRNN(nn.Module):
         conv_recurrent=False,
         hidden_dim=512,
         output_timesteps=1,
+        soft_reset=False,
+        skip_connections=True,
         initial_scaling: int=None,
         use_plif_encoder=False,
         use_plif_recurrent=False,
@@ -34,6 +36,8 @@ class SpikingUNetRNN(nn.Module):
         self.conv_recurrent = conv_recurrent
         self.hidden_dim = hidden_dim
         self.output_timesteps = output_timesteps
+        self.soft_reset = soft_reset
+        self.skip_connections = skip_connections
         self.initial_scaling = initial_scaling
         self.scaled_input_size = (
             input_size[0] // initial_scaling if initial_scaling is not None else input_size[0],
@@ -70,13 +74,16 @@ class SpikingUNetRNN(nn.Module):
                 in_channels=in_channels,
                 scaling_factor=self.initial_scaling,
                 use_plif=self.use_plif_encoder,
-                init_tau=self.init_tau_encoder
+                init_tau=self.init_tau_encoder,
+                soft_reset=self.soft_reset
             )
             prev_channels = self.initial_down_block.out_channels
         else:
             print("No initial downscaling block used")
             self.initial_down_block = None
             prev_channels = in_channels
+
+        self.print_model_info()
 
             # Encoder path
         self.encoders = nn.ModuleList()
@@ -109,13 +116,13 @@ class SpikingUNetRNN(nn.Module):
             print(f"Using fully connected bottleneck with hidden_dim={hidden_dim} and flat_dim={flat_dim}")
             if self.fc_recurrent:
                 self.bottleneck_neuron = layer.LinearRecurrentContainer(
-                    _make_neuron(init_tau_recurrent, use_plif=use_plif_recurrent),
+                    _make_neuron(init_tau_recurrent, use_plif=use_plif_recurrent, soft_reset=self.soft_reset),
                     in_features=hidden_dim,
                     out_features=hidden_dim,
                     bias=True
                 )
             else:
-                self.bottleneck_neuron = _make_neuron(init_tau=init_tau_recurrent, use_plif=use_plif_recurrent)
+                self.bottleneck_neuron = _make_neuron(init_tau=init_tau_recurrent, use_plif=use_plif_recurrent, soft_reset=self.soft_reset)
 
             self.expand_fc = layer.Linear(hidden_dim, flat_dim, bias=False, step_mode='m')
 
@@ -130,6 +137,9 @@ class SpikingUNetRNN(nn.Module):
                 layer.ConvTranspose2d(prev_ch, feat, kernel_size=2, stride=2)
             )
             # decoder expects skip_ch + feat channels
+            if not self.skip_connections:
+                skip_ch = 0
+                
             self.decoders.append(
                 self.double_conv(skip_ch + feat, feat, init_tau_decoder, use_plif_decoder)
             )
@@ -204,7 +214,9 @@ class SpikingUNetRNN(nn.Module):
             x = enc(x)
             if self.conv_recurrent and idx == len(self.encoders) - 1: # last encoder layer (without bottom layer)
                 self._recurrent_feedback = x # store feedback from penultimate conv
-            skips.append(x)
+                
+            if self.skip_connections:
+                skips.append(x)
             x = pool(x)
 
         # Bottleneck
@@ -221,13 +233,15 @@ class SpikingUNetRNN(nn.Module):
         # Decoder
         for i, (up, dec) in enumerate(zip(self.upconvs, self.decoders)):
             x = up(x)
-            skip = skips.pop()
-            if x.shape[-2:] != skip.shape[-2:]:
-                print(f"Padding skip connection from {skip.shape} to {x.shape}")
-                dy = skip.size(-2) - x.size(-2)
-                dx = skip.size(-1) - x.size(-1)
-                x = nn.functional.pad(x, [dx // 2, dx - dx // 2, dy // 2, dy - dy // 2])
-            x = torch.cat([skip, x], dim=1)
+            if self.skip_connections:
+                skip = skips.pop()
+                if x.shape[-2:] != skip.shape[-2:]:
+                    print(f"Padding skip connection from {skip.shape} to {x.shape}")
+                    dy = skip.size(-2) - x.size(-2)
+                    dx = skip.size(-1) - x.size(-1)
+                    x = nn.functional.pad(x, [dx // 2, dx - dx // 2, dy // 2, dy - dy // 2])
+                x = torch.cat([skip, x], dim=1)
+                
             x = dec(x)
 
         # Final conv + membrane integration
@@ -237,7 +251,6 @@ class SpikingUNetRNN(nn.Module):
 
         return v    
         
-
         
     def aggregate_output(self, v_seq: torch.Tensor):
         """
@@ -262,22 +275,47 @@ class SpikingUNetRNN(nn.Module):
         return nn.Sequential(
             layer.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
             layer.BatchNorm2d(out_channels),
-            _make_neuron(init_tau=init_tau, use_plif=use_plif),
+            _make_neuron(init_tau=init_tau, use_plif=use_plif, soft_reset=self.soft_reset),
             layer.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
             layer.BatchNorm2d(out_channels),
-            _make_neuron(init_tau=init_tau, use_plif=use_plif)
+            _make_neuron(init_tau=init_tau, use_plif=use_plif, soft_reset=self.soft_reset)
         )
 
+    def print_model_info(self):
+        print("\n=== SpikingUNetRNN Configuration ===")
+        print(f"Input size:           {self.input_size}")
+        print(f"Scaled input size:    {self.scaled_input_size}")
+        print(f"Features:             {self.features}")
+        print(f"FC bottleneck:        {self.fc_bottleneck}")
+        print(f"FC recurrent:         {self.fc_recurrent}")
+        print(f"Conv recurrent:       {self.conv_recurrent}")
+        print(f"Hidden dim:           {self.hidden_dim}")
+        print(f"Output timesteps:     {self.output_timesteps}")
+        print(f"Soft reset:           {self.soft_reset}")
+        print(f"Skip connections:     {self.skip_connections}")
+        print(f"Use PLIF encoder:     {self.use_plif_encoder}")
+        print(f"Use PLIF recurrent:   {self.use_plif_recurrent}")
+        print(f"Use PLIF decoder:     {self.use_plif_decoder}")
+        print(f"Init tau recurrent:   {self.init_tau_recurrent}")
+        print(f"Init tau encoder:     {self.init_tau_encoder}")
+        print(f"Init tau decoder:     {self.init_tau_decoder}")
+        print(f"Visualize:            {self.visualize}")
+        print(f"Output scale:         {self.output_scale.item():.4f}")
+        print(f"Output bias:          {self.output_bias.item():.4f}")
+        print(f"Recurrent scale:      {self.recurrent_scale.item():.4f}")
+        print("====================================\n")
+        
 @staticmethod
-def _make_neuron(init_tau = 5.0, use_plif=False):
+def _make_neuron(init_tau = 5.0, use_plif=False, soft_reset=False):
+    v_reset = 0.0 if not soft_reset else None
     if use_plif:
-        return neuron.ParametricLIFNode(init_tau=init_tau, surrogate_function=surrogate.ATan()) 
+        return neuron.ParametricLIFNode(init_tau=init_tau, v_reset=v_reset, surrogate_function=surrogate.ATan()) 
     else:
-        return neuron.LIFNode(surrogate_function=surrogate.ATan())
+        return neuron.LIFNode(v_reset=v_reset, surrogate_function=surrogate.ATan())
         
         
 class InitialDownscaleBlock(nn.Module):
-    def __init__(self, in_channels, scaling_factor, use_plif=False, init_tau=5.0):
+    def __init__(self, in_channels, scaling_factor, use_plif=False, init_tau=5.0, soft_reset=False):
         super().__init__()
 
         if scaling_factor < 4 or (scaling_factor & (scaling_factor - 1)) != 0 or int(math.log2(scaling_factor)) % 2 != 0:
@@ -286,13 +324,14 @@ class InitialDownscaleBlock(nn.Module):
         steps = int(math.log2(scaling_factor) // 2)
         layers = []
         current_channels = in_channels
+        v_reset = 0.0 if not soft_reset else None
 
         for _ in range(steps):
             layers += [
                 layer.Conv2d(current_channels, 4, kernel_size=5, stride=2, padding=2, bias=False),
                 layer.BatchNorm2d(4),
-                neuron.ParametricLIFNode(init_tau=init_tau, surrogate_function=surrogate.ATan()) if use_plif 
-                else neuron.LIFNode(init_tau=init_tau, surrogate_function=surrogate.ATan()),
+                neuron.ParametricLIFNode(init_tau=init_tau, v_reset=v_reset, surrogate_function=surrogate.ATan()) if use_plif 
+                else neuron.LIFNode(init_tau=init_tau, v_reset=v_reset, surrogate_function=surrogate.ATan()),
                 layer.MaxPool2d(kernel_size=2, stride=2)
             ]
             current_channels = 4

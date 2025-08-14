@@ -69,6 +69,8 @@ def main():
             conv_recurrent=cfg.model.conv_recurrent,
             hidden_dim=cfg.model.hidden_dim,
             output_timesteps=cfg.model.output_timesteps,
+            soft_reset=cfg.model.soft_reset,
+            skip_connections=cfg.model.skip_connections,
             initial_scaling=cfg.model.initial_scaling,
             use_plif_encoder=cfg.model.use_plif_encoder,
             use_plif_recurrent=cfg.model.use_plif_recurrent,
@@ -172,6 +174,8 @@ def parse_args():
     parser.add_argument('--no-fc-bottleneck', dest='model_fc_bottleneck', action='store_false', help='Do not use FC bottleneck')
     parser.set_defaults(model_fc_bottleneck=None)
     
+    parser.add_argument('--soft-reset', dest='model_soft_reset', action='store_true', help='Use soft reset')
+    parser.add_argument('--no-skip-connections', dest='model_skip_connections', action='store_false', help='Do not use skip connections')
 
     parser.add_argument('--fc-recurrent', dest='model_fc_recurrent', action='store_true', help='Use recurrent bottleneck')
     parser.add_argument('--no-fc-recurrent', dest='model_fc_recurrent', action='store_false', help='Do not use recurrent bottleneck')
@@ -180,6 +184,8 @@ def parse_args():
     parser.add_argument('--conv-recurrent', dest='model_conv_recurrent', action='store_true', help='Use recurrent encoder')
     parser.add_argument('--no-conv-recurrent', dest='model_conv_recurrent', action='store_false', help='Do not use recurrent encoder')
     parser.set_defaults(model_conv_recurrent=None)
+    
+    parser.add_argument('--use-static-data', dest='data_static', action='store_true', help='Use static data loader')
     
     parser.add_argument('--description', type=str, dest='cfg_description', help='Override config description')
     

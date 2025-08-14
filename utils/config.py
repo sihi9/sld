@@ -47,6 +47,12 @@ def load_config(path="configs/default.yaml", model=None, data=None, overrides=No
             cfg.setdefault("model", {})["fc_recurrent"] = overrides.model_fc_recurrent
         if overrides.model_conv_recurrent is not None:
             cfg.setdefault("model", {})["conv_recurrent"] = overrides.model_conv_recurrent
+        if overrides.model_soft_reset is not None:
+            cfg.setdefault("model", {})["soft_reset"] = overrides.model_soft_reset
+        if overrides.model_skip_connections is not None:
+            cfg.setdefault("model", {})["skip_connections"] = overrides.model_skip_connections
+        if overrides.data_use_static is not None:
+            cfg.setdefault("data", {})["static"] = overrides.data_use_static
         if overrides.cfg_description is not None:
             cfg["description"] = overrides.cfg_description
 
@@ -59,10 +65,13 @@ def apply_missing_defaults(cfg):
     model_defaults = {
         "initial_scaling": 1,
         "conv_recurrent": False,
+        "soft_reset": False,
+        "skip_connections": True, 
     }
     
     data_defaults = {
         "augmentation_intensity": 0.0,
+        "static": False,  # Default to False for dynamic data
     }
 
     for key, value in model_defaults.items():
