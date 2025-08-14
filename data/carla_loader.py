@@ -199,7 +199,7 @@ def build_carla_dataloaders(
 
     train_keys = ['Town04_2000', 'Town04_4000', 'Town05_10000', 'Town10HD_5000']
     val_keys = ['Town03_2000', 'Town06_5000']
-    test_keys = ['Town03_2000']  # you could make this a list for multi-file test
+    test_keys = ['Town06_5000']  # you could make this a list for multi-file test
 
     train_files = [file_from_key(k) for k in train_keys]
     val_files = [file_from_key(k) for k in val_keys]

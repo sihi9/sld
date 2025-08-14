@@ -114,6 +114,7 @@ def main():
         final_loss, final_iou = evaluate(model, val_loader, device, use_amp=False)
         logger.log_scalar("test/final_IoU", final_iou, step=0)
         logger.log_scalar("test/final_loss", final_loss, step=0)
+        print(f"Final evaluation loss: {final_loss:.4f}, IoU: {final_iou:.4f}")
     
         visualize_random_batch(model, test_loader, device=device, n=cfg.data.batch_size, logger=logger, step=cfg.train.epochs)
         visualize_predictions_video(
