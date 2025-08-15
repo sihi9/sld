@@ -19,6 +19,7 @@ class SpikingUNetRNN(nn.Module):
         output_timesteps=1,
         soft_reset=False,
         skip_connections=True,
+        analog: bool = False,
         initial_scaling: int=None,
         use_plif_encoder=False,
         use_plif_recurrent=False,
@@ -38,6 +39,7 @@ class SpikingUNetRNN(nn.Module):
         self.output_timesteps = output_timesteps
         self.soft_reset = soft_reset
         self.skip_connections = skip_connections
+        self.analog = analog
         self.initial_scaling = initial_scaling
         self.scaled_input_size = (
             input_size[0] // initial_scaling if initial_scaling is not None else input_size[0],
@@ -75,7 +77,8 @@ class SpikingUNetRNN(nn.Module):
                 scaling_factor=self.initial_scaling,
                 use_plif=self.use_plif_encoder,
                 init_tau=self.init_tau_encoder,
-                soft_reset=self.soft_reset
+                soft_reset=self.soft_reset,
+                analog=self.analog
             )
             prev_channels = self.initial_down_block.out_channels
         else:
@@ -272,14 +275,24 @@ class SpikingUNetRNN(nn.Module):
         Helper to create two spiking convolutional layers with batchnorm and LIF/PLIF neurons,
         instantiating fresh neuron nodes for each layer to maintain independent states.
         """
-        return nn.Sequential(
-            layer.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
-            layer.BatchNorm2d(out_channels),
-            _make_neuron(init_tau=init_tau, use_plif=use_plif, soft_reset=self.soft_reset),
-            layer.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
-            layer.BatchNorm2d(out_channels),
-            _make_neuron(init_tau=init_tau, use_plif=use_plif, soft_reset=self.soft_reset)
-        )
+        if not self.analog:
+            return nn.Sequential(
+                layer.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
+                layer.BatchNorm2d(out_channels),
+                _make_neuron(init_tau=init_tau, use_plif=use_plif, soft_reset=self.soft_reset),
+                layer.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
+                layer.BatchNorm2d(out_channels),
+                _make_neuron(init_tau=init_tau, use_plif=use_plif, soft_reset=self.soft_reset)
+            )
+        else:
+            return nn.Sequential(
+                _make_neuron(init_tau=init_tau, use_plif=use_plif, soft_reset=self.soft_reset),
+                layer.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
+                layer.BatchNorm2d(out_channels),
+                _make_neuron(init_tau=init_tau, use_plif=use_plif, soft_reset=self.soft_reset),
+                layer.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
+                layer.BatchNorm2d(out_channels),
+            )
 
     def print_model_info(self):
         print("\n=== SpikingUNetRNN Configuration ===")
@@ -293,6 +306,7 @@ class SpikingUNetRNN(nn.Module):
         print(f"Output timesteps:     {self.output_timesteps}")
         print(f"Soft reset:           {self.soft_reset}")
         print(f"Skip connections:     {self.skip_connections}")
+        print(f"Analog (skips):       {self.analog}")
         print(f"Use PLIF encoder:     {self.use_plif_encoder}")
         print(f"Use PLIF recurrent:   {self.use_plif_recurrent}")
         print(f"Use PLIF decoder:     {self.use_plif_decoder}")
@@ -315,7 +329,7 @@ def _make_neuron(init_tau = 5.0, use_plif=False, soft_reset=False):
         
         
 class InitialDownscaleBlock(nn.Module):
-    def __init__(self, in_channels, scaling_factor, use_plif=False, init_tau=5.0, soft_reset=False):
+    def __init__(self, in_channels, scaling_factor, use_plif=False, init_tau=5.0, soft_reset=False, analog: bool = False):
         super().__init__()
 
         if scaling_factor < 4 or (scaling_factor & (scaling_factor - 1)) != 0 or int(math.log2(scaling_factor)) % 2 != 0:
@@ -327,13 +341,22 @@ class InitialDownscaleBlock(nn.Module):
         v_reset = 0.0 if not soft_reset else None
 
         for _ in range(steps):
-            layers += [
-                layer.Conv2d(current_channels, 4, kernel_size=5, stride=2, padding=2, bias=False),
-                layer.BatchNorm2d(4),
-                neuron.ParametricLIFNode(init_tau=init_tau, v_reset=v_reset, surrogate_function=surrogate.ATan()) if use_plif 
-                else neuron.LIFNode(init_tau=init_tau, v_reset=v_reset, surrogate_function=surrogate.ATan()),
-                layer.MaxPool2d(kernel_size=2, stride=2)
-            ]
+            if not analog:
+                # Conv -> BN -> LIF -> Pool  (original spiking ordering)
+                layers += [
+                    layer.Conv2d(current_channels, 4, kernel_size=5, stride=2, padding=2, bias=False),
+                    layer.BatchNorm2d(4),
+                    neuron.ParametricLIFNode(init_tau=init_tau, v_reset=v_reset, surrogate_function=surrogate.ATan()) if use_plif 
+                    else neuron.LIFNode(init_tau=init_tau, v_reset=v_reset, surrogate_function=surrogate.ATan()),
+                    layer.MaxPool2d(kernel_size=2, stride=2)
+                ]
+            else:
+                # LIF -> Conv -> BN -> Pool (analog activations after BN)
+                layers += [
+                    layer.Conv2d(current_channels, 4, kernel_size=5, stride=2, padding=2, bias=False),
+                    layer.BatchNorm2d(4),
+                    layer.MaxPool2d(kernel_size=2, stride=2)
+                ]
             current_channels = 4
 
         self.down_block = nn.Sequential(*layers)

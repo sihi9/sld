@@ -100,7 +100,7 @@ class HDF5Dataset(Dataset):
         self.smooth_lane = smooth_lane
         self.augmentation_intensity = augmentation_intensity
 
-        self.preload = True  # todo: make this configurable
+        self.preload = False  # todo: make this configurable
         
         # Open in read-only mode
         self._h5 = h5py.File(self.h5_path, 'r')
@@ -214,9 +214,8 @@ class HDF5Dataset(Dataset):
             ch, cw = self._crop_margin_h, self._crop_margin_w
             x_ds = x_ds[:, :, ch:-ch, cw:-cw]
             # compute label crop scaled to its resolution
-            ratio = self.downscale_factor * self.model_initial_downscale
-            ch_lab = ch // ratio
-            cw_lab = cw // ratio
+            ch_lab = ch // self.model_initial_downscale
+            cw_lab = cw // self.model_initial_downscale
             lab_ds = lab_ds[:, ch_lab:-ch_lab, cw_lab:-cw_lab]
             
         # === POST-CROP MODEL COMPATIBILITY CHECK ===

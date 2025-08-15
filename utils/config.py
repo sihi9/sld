@@ -51,6 +51,8 @@ def load_config(path="configs/default.yaml", model=None, data=None, overrides=No
             cfg.setdefault("model", {})["soft_reset"] = overrides.model_soft_reset
         if overrides.model_skip_connections is not None:
             cfg.setdefault("model", {})["skip_connections"] = overrides.model_skip_connections
+        if overrides.model_analog is not None:
+            cfg.setdefault("model", {})["analog"] = overrides.model_analog
         if overrides.data_use_static is not None:
             cfg.setdefault("data", {})["static"] = overrides.data_use_static
         if overrides.cfg_description is not None:
@@ -67,6 +69,7 @@ def apply_missing_defaults(cfg):
         "conv_recurrent": False,
         "soft_reset": False,
         "skip_connections": True, 
+        "analog": False,  # Default to False for non-analog skips
     }
     
     data_defaults = {

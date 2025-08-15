@@ -71,6 +71,7 @@ def main():
             output_timesteps=cfg.model.output_timesteps,
             soft_reset=cfg.model.soft_reset,
             skip_connections=cfg.model.skip_connections,
+            analog=cfg.model.analog,  # Use analog skips if specified
             initial_scaling=cfg.model.initial_scaling,
             use_plif_encoder=cfg.model.use_plif_encoder,
             use_plif_recurrent=cfg.model.use_plif_recurrent,
@@ -176,7 +177,11 @@ def parse_args():
     
     parser.add_argument('--soft-reset', dest='model_soft_reset', action='store_true', help='Use soft reset')
     parser.add_argument('--no-skip-connections', dest='model_skip_connections', action='store_false', help='Do not use skip connections')
-
+    
+    parser.add_argument('--analog', dest='model_analog', action='store_true', help='Use analog skips. Note that this might not work without initial scaling block, as initial neurons would not spike')
+    parser.add_argument('--not-analog', dest='model_analog', action='store_false', help='Do not use analog skips')
+    parser.set_defaults(model_analog=None)
+    
     parser.add_argument('--fc-recurrent', dest='model_fc_recurrent', action='store_true', help='Use recurrent bottleneck')
     parser.add_argument('--no-fc-recurrent', dest='model_fc_recurrent', action='store_false', help='Do not use recurrent bottleneck')
     parser.set_defaults(model_fc_recurrent=None)
