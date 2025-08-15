@@ -185,7 +185,7 @@ def parse_args():
     parser.add_argument('--no-conv-recurrent', dest='model_conv_recurrent', action='store_false', help='Do not use recurrent encoder')
     parser.set_defaults(model_conv_recurrent=None)
     
-    parser.add_argument('--use-static-data', dest='data_static', action='store_true', help='Use static data loader')
+    parser.add_argument('--use-static-data', dest='data_use_static', action='store_true', help='Use static data loader')
     
     parser.add_argument('--description', type=str, dest='cfg_description', help='Override config description')
     
