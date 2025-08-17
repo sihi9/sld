@@ -1,0 +1,4 @@
+Started: 2025-08-16 01:30:36
+Device: auto
+AMP: False
+Description: Everything

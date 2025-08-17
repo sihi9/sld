@@ -1,5 +1,0 @@
-Started: 2025-06-21 20:22:14
-Device: auto
-AMP: False
-Description: Recurrent UNet training configuration
-

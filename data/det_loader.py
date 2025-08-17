@@ -531,14 +531,23 @@ def test_time():
 if __name__ == '__main__':
     # Quick test
     # test_time()
-    loader = build_det_dataloaders(downscale_factor=1,
-                                   model_initial_downscale=4,
-                                   model_downscale=4, 
-                                   shuffle=False, 
-                                   augmentation_intesity=0.05)["train"]
-    
-    for x, y in loader:
-        print("Input:", x.shape)  
+    loaders = build_det_dataloaders(
+        downscale_factor=1,
+        model_initial_downscale=4,
+        model_downscale=4, 
+        shuffle=False, 
+        augmentation_intesity=0.05
+    )
+
+    # Full dataset sizes (independent of batch size)
+    print("Dataset sizes:")
+    print("  Train:", len(loaders["train"].dataset))
+    print("  Val:  ", len(loaders["val"].dataset))
+    print("  Test: ", len(loaders["test"].dataset))
+
+    # Optional quick sanity check on a single batch
+    for x, y in loaders["train"]:
+        print("Input:", x.shape)
         print("Label:", y.shape)
         plot_sample_sequence(x, y, history=1, save_path='./sample_sequence.png', show=False)
         break

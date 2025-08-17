@@ -1,0 +1,4 @@
+Started: 2025-08-16 01:35:30
+Device: auto
+AMP: False
+Description: no recurrent bottleneck

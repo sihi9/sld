@@ -1,0 +1,4 @@
+Started: 2025-08-15 22:27:23
+Device: auto
+AMP: False
+Description: default config analog 

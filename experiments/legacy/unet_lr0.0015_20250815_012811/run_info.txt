@@ -1,0 +1,4 @@
+Started: 2025-08-15 01:28:11
+Device: auto
+AMP: False
+Description: default config without skip

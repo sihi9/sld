@@ -1,0 +1,4 @@
+Started: 2025-08-16 01:33:15
+Device: auto
+AMP: False
+Description: Static data

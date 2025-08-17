@@ -1,0 +1,4 @@
+Started: 2025-08-15 01:16:13
+Device: auto
+AMP: False
+Description: default config with soft reset

@@ -1,0 +1,4 @@
+Started: 2025-08-15 02:26:20
+Device: auto
+AMP: False
+Description: default config with static input
