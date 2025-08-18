@@ -1,7 +1,8 @@
 #!/bin/bash
 
 python main.py \
-        --experiment-name unet_lr0.0015_20250813_002946 \
-        --eval-only
+        --experiment-name unet_lr0.0015_20250817_034658 \
+        --eval-only \
+        --checkpoint-type latest
 
 

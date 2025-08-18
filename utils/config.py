@@ -37,6 +37,8 @@ def load_config(path="configs/default.yaml", model=None, data=None, overrides=No
     if overrides:
         if overrides.train_lr is not None:
             cfg.setdefault("train", {})["lr"] = overrides.train_lr
+        if overrides.train_epochs is not None:
+            cfg.setdefault("train", {})["epochs"] = overrides.train_epochs
         if overrides.model_hidden_dim is not None:
             cfg.setdefault("model", {})["hidden_dim"] = overrides.model_hidden_dim
         if overrides.model_features is not None:

@@ -1,0 +1,4 @@
+Started: 2025-08-17 14:54:07
+Device: auto
+AMP: False
+Description: Small best longer

@@ -1,0 +1,4 @@
+Started: 2025-08-18 17:30:51
+Device: auto
+AMP: False
+Description: non-analog U-Net with initial scaling

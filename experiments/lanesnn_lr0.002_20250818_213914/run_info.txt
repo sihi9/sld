@@ -1,0 +1,4 @@
+Started: 2025-08-18 21:39:14
+Device: auto
+AMP: False
+Description: LaneSNN with 200 Epochs

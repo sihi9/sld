@@ -1,0 +1,4 @@
+Started: 2025-08-18 21:18:25
+Device: auto
+AMP: False
+Description: Small analog U-Net

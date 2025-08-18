@@ -119,7 +119,7 @@ def main():
     if args.eval_only:
         print(f"Running evaluation only")
         model.eval()
-        final_loss, final_iou = evaluate(model, val_loader, device, use_amp=False)
+        final_loss, final_iou = evaluate(model, test_loader, device, use_amp=False)
         logger.log_scalar("test/final_IoU", final_iou, step=0)
         logger.log_scalar("test/final_loss", final_loss, step=0)
         print(f"Final evaluation loss: {final_loss:.4f}, IoU: {final_iou:.4f}")
@@ -178,6 +178,7 @@ def parse_args():
     # CLI overrides
     parser.add_argument('--lr', type=float, dest='train_lr', help='Override training learning rate')
     parser.add_argument('--hidden-dim', type=int, dest='model_hidden_dim', help='Override model hidden dim')
+    parser.add_argument('--epochs', type=int, dest='train_epochs', default=None, help='Number of training epochs')
 
     parser.add_argument('--features', nargs='+', type=int, dest='model_features', help='Override U-Net features')
     parser.add_argument('--fc-bottleneck', dest='model_fc_bottleneck', action='store_true', help='Use FC bottleneck')
@@ -226,7 +227,7 @@ def memory_analysis(model, input_shape, timesteps, batch_size):
     print(f"output monitors: {model.output_monitor}")
     report = analyzer.generate_memory_report(input_shape=input_shape,
                                              timesteps_range=[timesteps],
-                                             batch_sizes=[8])
+                                             batch_sizes=[batch_size])
     return report
     # result_train = analyzer.profile_inference_sequence(
     #     input_shape=input_shape,

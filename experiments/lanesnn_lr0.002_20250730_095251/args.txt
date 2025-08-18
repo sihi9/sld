@@ -1,1 +1,0 @@
-Namespace(model=None, data=None, train_lr=None, model_hidden_dim=None, model_features=None, model_fc_bottleneck=None, model_fc_recurrent=None, model_conv_recurrent=None, cfg_description=None, experiment_name='lanesnn_lr0.002_20250730_002334', eval_only=True, checkpoint_type='final')

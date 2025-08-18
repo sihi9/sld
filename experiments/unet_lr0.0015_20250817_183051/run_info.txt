@@ -1,0 +1,4 @@
+Started: 2025-08-17 18:30:51
+Device: auto
+AMP: False
+Description: Shallower U-Net

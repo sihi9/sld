@@ -1,0 +1,48 @@
+data:
+  augmentation_intensity: 0.05
+  batch_size: 8
+  downscale: 1
+  label_smoothing:
+    background: 0.05
+    enabled: true
+    lane: 0.95
+  loader: det
+  num_workers: 4
+  static: true
+  use_poisson: false
+  use_static: false
+  used_T: 30
+defaults:
+  data: det
+  model: unet
+description: U-Net with static
+log:
+  vis_interval: 20
+model:
+  analog: true
+  conv_recurrent: false
+  fc_bottleneck: false
+  fc_recurrent: false
+  features:
+  - 32
+  - 64
+  - 128
+  - 256
+  hidden_dim: 512
+  init_tau_decoder: 1.5
+  init_tau_encoder: 1.5
+  init_tau_recurrent: 15.0
+  initial_scaling: 4
+  name: unet
+  output_timesteps: 1
+  skip_connections: true
+  soft_reset: true
+  use_plif_decoder: true
+  use_plif_encoder: true
+  use_plif_recurrent: true
+train:
+  amp: false
+  device: auto
+  epochs: 200
+  lr: 0.0015
+  save_intermediate: false

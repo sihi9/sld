@@ -1,0 +1,4 @@
+Started: 2025-08-17 14:22:06
+Device: auto
+AMP: False
+Description: Ma 2025 deeper implementation

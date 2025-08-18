@@ -195,10 +195,10 @@ def build_carla_dataloaders(
     data_dir='./data/CARLA/'
 ):
     def file_from_key(key):
-        return f"dataset_{key}_T30_x4.h5"
+        return f"dataset_{key}_67fps_T30_x2.h5"
 
-    train_keys = ['Town04_2000', 'Town04_4000', 'Town05_10000', 'Town10HD_5000']
-    val_keys = ['Town03_2000', 'Town06_5000']
+    train_keys = ['Town03_4000', 'Town04_6000', 'Town05_10000', 'Town06_10000', 'Town10HD_10000']
+    val_keys = ['Town04_5000', 'Town06_5000']
     test_keys = ['Town06_5000']  # you could make this a list for multi-file test
 
     train_files = [file_from_key(k) for k in train_keys]
@@ -324,7 +324,7 @@ def test_time():
 if __name__ == '__main__':
     loader = build_carla_dataloaders(downscale_factor=1, 
                                      model_downscale=4,
-                                     model_initial_downscale=4, shuffle=True)["train"]
+                                     model_initial_downscale=4, shuffle=True)["test"]
     for x, y in loader:
         print("Input:", x.shape)
         print("Label:", y.shape)

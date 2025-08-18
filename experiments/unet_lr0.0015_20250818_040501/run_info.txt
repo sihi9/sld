@@ -1,0 +1,4 @@
+Started: 2025-08-18 04:05:01
+Device: auto
+AMP: False
+Description: Best Carla

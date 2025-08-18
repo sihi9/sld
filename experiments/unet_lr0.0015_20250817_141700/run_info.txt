@@ -1,0 +1,4 @@
+Started: 2025-08-17 14:17:00
+Device: auto
+AMP: False
+Description: Baseline U-Net 60 Epochs

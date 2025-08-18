@@ -1,0 +1,4 @@
+Started: 2025-08-18 05:40:58
+Device: auto
+AMP: False
+Description: Best with T = 10

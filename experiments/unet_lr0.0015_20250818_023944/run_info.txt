@@ -1,0 +1,4 @@
+Started: 2025-08-18 02:39:44
+Device: auto
+AMP: False
+Description: Best with static input

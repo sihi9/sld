@@ -1,0 +1,4 @@
+Started: 2025-08-17 18:27:56
+Device: auto
+AMP: False
+Description: U-Net with init scaling

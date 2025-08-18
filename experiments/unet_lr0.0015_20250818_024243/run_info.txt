@@ -1,0 +1,4 @@
+Started: 2025-08-18 02:42:43
+Device: auto
+AMP: False
+Description: U-Net with static

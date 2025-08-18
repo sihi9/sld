@@ -1,0 +1,4 @@
+Started: 2025-08-17 03:46:58
+Device: auto
+AMP: False
+Description: Baseline U-Net
