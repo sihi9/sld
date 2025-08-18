@@ -16,6 +16,7 @@ from utils.monitoring import SpikeLogger
 from utils.visualizations import visualize_random_batch, visualize_predictions_video
 from utils.config import load_config, get_device
 from utils.experiment import ExperimentManager
+from utils.memory_profiler import SpikingUNetMemoryAnalyzer
 
 def main():
     args = parse_args()
@@ -23,11 +24,14 @@ def main():
     resume_path = f"experiments/{args.experiment_name}" if args.experiment_name else None
     cfg = load_config(model=args.model, data=args.data, overrides=args, resume_path=resume_path)
     
+    # for memory analysis only:
+    # cfg.log.vis_interval = -1
 
     device = get_device()
     print(f"Running on {device} | AMP: {'Enabled' if cfg.train.amp else 'Disabled'}")
     print(f"Using model config: {cfg.model.name}")
     print(f"Using data loader: {cfg.data.loader}")
+    print(f"Description: {cfg.description or 'No description provided'}")
     
     exp = ExperimentManager(cfg, args)
     logger : SpikeLogger = exp.get_logger()
@@ -92,6 +96,7 @@ def main():
     else:
         raise ValueError(f"Unknown model type: {cfg.model.name}")
     
+         
     exp.log_model_summary(model, input_shape=(T, B, C_in, H_in, W_in))
     # if cfg.log.vis_interval > 0:    # todo: find a way that doesnt need v_monitor
     #     exp.log_neuron_counts(model, input_shape=(T, B, C_in, H_in, W_in))
@@ -100,7 +105,7 @@ def main():
         checkpoint_filename = {
             "final": "checkpoint_final.pth",
             "best": "checkpoint_best.pth",
-            "last": "checkpoint_last.pth"
+            "latest": "checkpoint_latest.pth"
         }[args.checkpoint_type]
 
         checkpoint_path = os.path.join(resume_path, "checkpoints", checkpoint_filename)
@@ -119,15 +124,16 @@ def main():
         logger.log_scalar("test/final_loss", final_loss, step=0)
         print(f"Final evaluation loss: {final_loss:.4f}, IoU: {final_iou:.4f}")
     
+        memory_analysis(model, input_shape=(C_in, H_in, W_in), timesteps=T, batch_size=cfg.data.batch_size)
         visualize_random_batch(model, test_loader, device=device, n=cfg.data.batch_size, logger=logger, step=cfg.train.epochs)
-        visualize_predictions_video(
-            model=model,
-            dataloader=test_loader,
-            device=device,
-            save_dir=f"outputs/{args.experiment_name}",
-            all_timesteps=False,
-            fps=2
-        )
+        # visualize_predictions_video(
+        #     model=model,
+        #     dataloader=test_loader,
+        #     device=device,
+        #     save_dir=f"outputs/{args.experiment_name}",
+        #     all_timesteps=False,
+        #     fps=2
+        # )
         #visualize_random_batch(model, val_loader, device=cfg.train.device)
         return  # Exit after evaluation
     
@@ -156,6 +162,9 @@ def main():
         epochs=cfg.train.epochs,
         logger=logger
     )
+    
+    report = memory_analysis(model, input_shape=(C_in, H_in, W_in), timesteps=T, batch_size=cfg.data.batch_size)
+    logger.log_text("memory_report", str(report))
         
     visualize_random_batch(model, test_loader, device=device, n=cfg.data.batch_size, logger=logger, step=cfg.train.epochs)
     logger.close()
@@ -168,15 +177,18 @@ def parse_args():
 
     # CLI overrides
     parser.add_argument('--lr', type=float, dest='train_lr', help='Override training learning rate')
-    parser.add_argument('--hidden_dim', type=int, dest='model_hidden_dim', help='Override model hidden dim')
+    parser.add_argument('--hidden-dim', type=int, dest='model_hidden_dim', help='Override model hidden dim')
 
     parser.add_argument('--features', nargs='+', type=int, dest='model_features', help='Override U-Net features')
     parser.add_argument('--fc-bottleneck', dest='model_fc_bottleneck', action='store_true', help='Use FC bottleneck')
     parser.add_argument('--no-fc-bottleneck', dest='model_fc_bottleneck', action='store_false', help='Do not use FC bottleneck')
     parser.set_defaults(model_fc_bottleneck=None)
     
+    parser.add_argument('--hard-reset', dest='model_soft_reset', action='store_false', help='Use hard reset')
     parser.add_argument('--soft-reset', dest='model_soft_reset', action='store_true', help='Use soft reset')
+    parser.set_defaults(model_soft_reset=None)
     parser.add_argument('--no-skip-connections', dest='model_skip_connections', action='store_false', help='Do not use skip connections')
+    parser.set_defaults(model_skip_connections=None)
     
     parser.add_argument('--analog', dest='model_analog', action='store_true', help='Use analog skips. Note that this might not work without initial scaling block, as initial neurons would not spike')
     parser.add_argument('--not-analog', dest='model_analog', action='store_false', help='Do not use analog skips')
@@ -191,6 +203,9 @@ def parse_args():
     parser.set_defaults(model_conv_recurrent=None)
     
     parser.add_argument('--static-data', dest='data_use_static', action='store_true', help='Use static data loader')
+    parser.add_argument('--used-T', dest='data_used_T', type=int, default=None, help='Override data timesteps')
+    parser.add_argument('--initial-scaling', dest='model_initial_scaling', type=int, default=None, help='Initial scaling factor for input size, used to calculate downscaling factor')
+    parser.add_argument('--downscale', dest='data_downscale', default=None, type=int, help='Downscaling factor for input size')
     
     parser.add_argument('--description', type=str, dest='cfg_description', help='Override config description')
     
@@ -198,11 +213,37 @@ def parse_args():
     parser.add_argument('--eval-only', action='store_true', help='If set, only run evaluation on given experiment')
 
     parser.add_argument(
-    "--checkpoint-type", type=str, choices=["final", "best", "last"], default="final",
+    "--checkpoint-type", type=str, choices=["final", "best", "latest"], default="final",
     help="Which checkpoint to evaluate: final (default), best (based on val_iou), or last (latest epoch)"
     )
     
     return parser.parse_args()
 
+def memory_analysis(model, input_shape, timesteps, batch_size):
+    analyzer = SpikingUNetMemoryAnalyzer(model, 'cuda')
+    model.visualize = False
+    model.output_monitor.remove_hooks()  # Disable output monitor for memory analysis
+    print(f"output monitors: {model.output_monitor}")
+    report = analyzer.generate_memory_report(input_shape=input_shape,
+                                             timesteps_range=[timesteps],
+                                             batch_sizes=[8])
+    return report
+    # result_train = analyzer.profile_inference_sequence(
+    #     input_shape=input_shape,
+    #     timesteps=timesteps,
+    #     batch_size=batch_size,
+    #     with_gradients=True 
+    # )
+    # #print(f"Memory usage for training sequence: {result_train}")
+    
+    # result_test = analyzer.profile_inference_sequence(
+    #     input_shape=input_shape,
+    #     timesteps=timesteps,
+    #     batch_size=batch_size,
+    #     with_gradients=False  # For inference
+    # )
+    #print(f"Memory usage for inference sequence: {result_test}")
+    
+    
 if __name__ == '__main__':
     main()
