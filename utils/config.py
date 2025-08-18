@@ -55,6 +55,12 @@ def load_config(path="configs/default.yaml", model=None, data=None, overrides=No
             cfg.setdefault("model", {})["analog"] = overrides.model_analog
         if overrides.data_use_static is not None:
             cfg.setdefault("data", {})["static"] = overrides.data_use_static
+        if overrides.data_used_T is not None:
+            cfg.setdefault("data", {})["used_T"] = overrides.data_used_T
+        if overrides.model_initial_scaling is not None:
+            cfg.setdefault("model", {})["initial_scaling"] = overrides.model_initial_scaling
+        if overrides.data_downscale is not None:
+            cfg.setdefault("data", {})["downscale"] = overrides.data_downscale
         if overrides.cfg_description is not None:
             cfg["description"] = overrides.cfg_description
 

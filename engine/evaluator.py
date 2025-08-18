@@ -35,6 +35,8 @@ def run_final_evaluation_and_save(
     print(f"Final Loss: {final_loss:.4f}, Final IoU: {final_iou:.4f}")
     logger.log_scalar("test/final_IoU", final_iou, step=epochs)
     logger.log_scalar("test/final_loss", final_loss, step=epochs)
+    
+    
 
     logger.save_checkpoint(name='checkpoint_final',
                            model=model,
@@ -42,6 +44,15 @@ def run_final_evaluation_and_save(
                            scaler=scaler,
                            epoch=epochs,
                            metrics={"final_iou": final_iou, "final_loss": final_loss},)
+   
+    best_checkpoint = os.path.join(logger.checkpoint_dir, "checkpoint_latest.pth") 
+    checkpoint = torch.load(best_checkpoint, map_location=device)
+    model.load_state_dict(checkpoint["model_state_dict"])
+    model.to(device)
+    best_loss, best_iou = evaluate(model, val_loader, device, use_amp=amp)
+    print(f"Best Loss: {best_loss:.4f}, Best IoU: {best_iou:.4f}")
+    logger.log_scalar("test/best_IoU", best_iou, step=epochs)
+    logger.log_scalar("test/best_loss", best_loss, step=epochs)
 
 
 def evaluate(model, dataloader, device, loss_fn=None, use_amp=False):
