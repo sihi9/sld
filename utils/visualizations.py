@@ -13,6 +13,8 @@ import torchvision.transforms.functional as TF
 
 from utils.monitoring import SpikeLogger
 
+from engine.evaluator import compute_batch_iou
+
 def visualize_random_batch(model, dataloader, device, sample_idx=0, n=3, time_idx=0, logger=None, step=0):
     """
     Visualizes predictions and optionally logs to TensorBoard.
@@ -188,6 +190,12 @@ def visualize_predictions_video(
 
             # Run model and IMMEDIATELY move outputs to CPU
             outputs = model(input_seq, return_logits=False).cpu()
+            
+            # iou=compute_batch_iou(outputs, labels, expect_logits=False)
+            # print(f"Batch IoU: {iou:.4f}")
+            # outputs= outputs.cpu()  # [B, 1, H, W]
+
+
             preds = (outputs > threshold).float()
 
             # Move inputs and labels back to CPU too (avoid GPU bloat)

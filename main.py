@@ -119,6 +119,7 @@ def main():
     if args.eval_only:
         print(f"Running evaluation only")
         model.eval()
+        
         final_loss, final_iou = evaluate(model, test_loader, device, use_amp=False)
         logger.log_scalar("test/final_IoU", final_iou, step=0)
         logger.log_scalar("test/final_loss", final_loss, step=0)
@@ -126,14 +127,14 @@ def main():
     
         memory_analysis(model, input_shape=(C_in, H_in, W_in), timesteps=T, batch_size=cfg.data.batch_size)
         visualize_random_batch(model, test_loader, device=device, n=cfg.data.batch_size, logger=logger, step=cfg.train.epochs)
-        # visualize_predictions_video(
-        #     model=model,
-        #     dataloader=test_loader,
-        #     device=device,
-        #     save_dir=f"outputs/{args.experiment_name}",
-        #     all_timesteps=False,
-        #     fps=2
-        # )
+        visualize_predictions_video(
+            model=model,
+            dataloader=test_loader,
+            device=device,
+            save_dir=f"outputs/{args.experiment_name}",
+            all_timesteps=False,
+            fps=2
+        )
         #visualize_random_batch(model, val_loader, device=cfg.train.device)
         return  # Exit after evaluation
     
