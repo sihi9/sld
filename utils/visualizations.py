@@ -352,4 +352,14 @@ def log_tau_per_plif_layer(model: nn.Module, logger: SpikeLogger, step: int):
     for name, module in model.named_modules():
         if isinstance(module, neuron.ParametricLIFNode):
             tau = 1.0 / module.w.sigmoid().detach()
-            logger.writer.add_histogram(f"NeuronTau/{name}", tau, global_step=step)
+            
+            if tau.numel() == 1:
+                print(f"  - Layer: {name}, tau (scalar): {tau.item():.3f}")
+            else:
+                print(f"  - Layer: {name}, tau range: [{tau.min():.3f}, {tau.max():.3f}], shape: {tuple(tau.shape)}")
+
+
+            if tau.numel() > 1:
+                logger.writer.add_histogram(f"NeuronTau/{name}", tau, global_step=step)
+            else:
+                logger.writer.add_scalar(f"NeuronTau/{name}", tau.item(), global_step=step)

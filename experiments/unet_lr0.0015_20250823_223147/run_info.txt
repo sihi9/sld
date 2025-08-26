@@ -1,0 +1,4 @@
+Started: 2025-08-23 22:31:47
+Device: auto
+AMP: False
+Description: Analog U-Net without skip

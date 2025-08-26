@@ -1,0 +1,4 @@
+Started: 2025-08-24 10:10:37
+Device: auto
+AMP: False
+Description: Big (Hareb) analog Recurrent

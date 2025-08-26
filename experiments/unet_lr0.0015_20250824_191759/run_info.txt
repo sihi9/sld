@@ -1,0 +1,4 @@
+Started: 2025-08-24 19:18:00
+Device: auto
+AMP: False
+Description: Recurrent Analog U-Net without recurrent encoder

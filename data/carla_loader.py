@@ -56,7 +56,9 @@ class HDF5Dataset(Dataset):
         self._h5 = h5py.File(self.h5_path, 'r')
         self._X = self._h5['X']
         self._Y = self._h5['Y']
-        self.indices = list(range(self._X.shape[0]))
+        #self.indices = list(range(self._X.shape[0]))
+        self.indices = list(range(0, self._X.shape[0], 15))
+        
         if self.filter_fn is not None:
             valid = []
             for idx in self.indices:
@@ -322,11 +324,13 @@ def test_time():
     print(f"Average time per batch: {elapsed / iterations:.2f} seconds")
 
 if __name__ == '__main__':
+    data_type = 'train'  # 'train', 'val', 'test'
     loader = build_carla_dataloaders(downscale_factor=1, 
-                                     model_downscale=4,
-                                     model_initial_downscale=4, shuffle=True)["test"]
-    for x, y in loader:
+                                     model_downscale=1,
+                                     model_initial_downscale=1, shuffle=True)[data_type]
+    for i, (x, y) in enumerate(loader):
         print("Input:", x.shape)
         print("Label:", y.shape)
-        plot_sample_sequence(x, y, history=1, save_path='./sample_sequence.png', show=False)
-        break
+        plot_sample_sequence(x, y, history=1, save_path=f'./{data_type}_sample_sequence{i}.png', show=False)
+        if i >= 5:
+            break

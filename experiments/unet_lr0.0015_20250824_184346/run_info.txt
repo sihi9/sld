@@ -1,0 +1,4 @@
+Started: 2025-08-24 18:43:46
+Device: auto
+AMP: False
+Description: Flat U-Net

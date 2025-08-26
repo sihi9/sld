@@ -1,0 +1,4 @@
+Started: 2025-08-23 16:31:14
+Device: auto
+AMP: False
+Description: Base U-Net without skip

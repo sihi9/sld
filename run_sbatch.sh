@@ -2,17 +2,15 @@
 
 sbatch run_snn.sh \
     --model unet \
-    --data det \
-    --description "Small analog U-Net" \
+    --data carla \
+    --description "Best with carla" \
     --features 16 24 32 48 \
     --initial-scaling 4 \
     --downscale 1 \
-    --analog \
     --soft-reset \
-    --no-fc-bottleneck \
-    --no-fc-recurrent \
-    --no-conv-recurrent \
-
+    --fc-bottleneck \
+    --fc-recurrent \
+    --conv-recurrent \
 # sleep 5
 
 # sbatch run_snn.sh \

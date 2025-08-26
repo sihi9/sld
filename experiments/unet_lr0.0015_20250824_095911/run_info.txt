@@ -1,0 +1,4 @@
+Started: 2025-08-24 09:59:11
+Device: auto
+AMP: False
+Description: Analog Recurrent without PLIF

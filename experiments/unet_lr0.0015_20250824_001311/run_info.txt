@@ -1,0 +1,4 @@
+Started: 2025-08-24 00:13:11
+Device: auto
+AMP: False
+Description: Test with extra LIF Neuron

@@ -125,7 +125,7 @@ def main():
         logger.log_scalar("test/final_loss", final_loss, step=0)
         print(f"Final evaluation loss: {final_loss:.4f}, IoU: {final_iou:.4f}")
     
-        memory_analysis(model, input_shape=(C_in, H_in, W_in), timesteps=T, batch_size=cfg.data.batch_size)
+        #memory_analysis(model, input_shape=(C_in, H_in, W_in), timesteps=T, batch_size=cfg.data.batch_size)
         visualize_random_batch(model, test_loader, device=device, n=cfg.data.batch_size, logger=logger, step=cfg.train.epochs)
         visualize_predictions_video(
             model=model,

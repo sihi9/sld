@@ -1,0 +1,4 @@
+Started: 2025-08-24 19:09:34
+Device: auto
+AMP: False
+Description: Small U-Net with binary

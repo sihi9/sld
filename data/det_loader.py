@@ -534,7 +534,7 @@ if __name__ == '__main__':
     loaders = build_det_dataloaders(
         downscale_factor=1,
         model_initial_downscale=4,
-        model_downscale=4, 
+        model_downscale=8, 
         shuffle=False, 
         augmentation_intesity=0.05
     )
@@ -546,8 +546,9 @@ if __name__ == '__main__':
     print("  Test: ", len(loaders["test"].dataset))
 
     # Optional quick sanity check on a single batch
-    for x, y in loaders["train"]:
+    for i, (x, y) in enumerate(loaders["val"]):
         print("Input:", x.shape)
         print("Label:", y.shape)
-        plot_sample_sequence(x, y, history=1, save_path='./sample_sequence.png', show=False)
-        break
+        plot_sample_sequence(x, y, history=1, save_path=f'./sample_sequence{i}.png', show=False)
+        if i >= 5:
+            break

@@ -115,6 +115,7 @@ class SpikingUNetRNN(nn.Module):
         flat_dim = self.bottom_channels * bottom_H * bottom_W
 
         if self.fc_bottleneck:
+            #self.extra_lif = _make_neuron(init_tau=init_tau_encoder, use_plif=use_plif_encoder, soft_reset=self.soft_reset)
             self.reduce_fc = layer.Linear(flat_dim, hidden_dim, bias=False, step_mode='m')
             print(f"Using fully connected bottleneck with hidden_dim={hidden_dim} and flat_dim={flat_dim}")
             if self.fc_recurrent:
@@ -226,6 +227,8 @@ class SpikingUNetRNN(nn.Module):
         x = self.bottom_block(x)
 
         if self.fc_bottleneck:
+            # if self.analog:
+            #     x = self.extra_lif(x)
             B, C, H, W = x.shape
             x_flat = x.view(B, -1)
             reduced = self.reduce_fc(x_flat)
@@ -325,7 +328,7 @@ def _make_neuron(init_tau = 5.0, use_plif=False, soft_reset=False):
     if use_plif:
         return neuron.ParametricLIFNode(init_tau=init_tau, v_reset=v_reset, surrogate_function=surrogate.ATan()) 
     else:
-        return neuron.LIFNode(v_reset=v_reset, surrogate_function=surrogate.ATan())
+        return neuron.LIFNode(v_reset=v_reset, tau=init_tau, surrogate_function=surrogate.ATan())
         
         
 class InitialDownscaleBlock(nn.Module):
@@ -347,7 +350,7 @@ class InitialDownscaleBlock(nn.Module):
                     layer.Conv2d(current_channels, 4, kernel_size=5, stride=2, padding=2, bias=False),
                     layer.BatchNorm2d(4),
                     neuron.ParametricLIFNode(init_tau=init_tau, v_reset=v_reset, surrogate_function=surrogate.ATan()) if use_plif 
-                    else neuron.LIFNode(init_tau=init_tau, v_reset=v_reset, surrogate_function=surrogate.ATan()),
+                    else neuron.LIFNode(tau=init_tau, v_reset=v_reset, surrogate_function=surrogate.ATan()),
                     layer.MaxPool2d(kernel_size=2, stride=2)
                 ]
             else:
