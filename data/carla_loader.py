@@ -56,8 +56,8 @@ class HDF5Dataset(Dataset):
         self._h5 = h5py.File(self.h5_path, 'r')
         self._X = self._h5['X']
         self._Y = self._h5['Y']
-        #self.indices = list(range(self._X.shape[0]))
-        self.indices = list(range(0, self._X.shape[0], 15))
+        self.indices = list(range(self._X.shape[0]))
+        #self.indices = list(range(0, self._X.shape[0], 15))
         
         if self.filter_fn is not None:
             valid = []
@@ -199,16 +199,16 @@ def build_carla_dataloaders(
     def file_from_key(key):
         return f"dataset_{key}_67fps_T30_x2.h5"
 
-    train_keys = ['Town03_4000', 'Town04_6000', 'Town05_10000', 'Town06_10000', 'Town10HD_10000']
-    val_keys = ['Town04_5000', 'Town06_5000']
-    test_keys = ['Town04_5000']  # you could make this a list for multi-file test
+    train_keys = ['Town03_5000', 'Town04_5000' , 'Town06_5000', 'Town10HD_5000']
+    #val_keys = ['Town04_5000', 'Town06_5000']
+    test_keys = ['Town05_5000']  # you could make this a list for multi-file test
 
     train_files = [file_from_key(k) for k in train_keys]
-    val_files = [file_from_key(k) for k in val_keys]
+    #val_files = [file_from_key(k) for k in val_keys]
     test_files = [file_from_key(k) for k in test_keys]
 
     train_paths = [os.path.join(data_dir, f) for f in train_files]
-    val_paths = [os.path.join(data_dir, f) for f in val_files]
+    #val_paths = [os.path.join(data_dir, f) for f in val_files]
     test_paths = [os.path.join(data_dir, f) for f in test_files]
 
     train_dataset = MultiHDF5Dataset(
@@ -222,18 +222,26 @@ def build_carla_dataloaders(
         smooth_bg=smooth_bg,
         smooth_lane=smooth_lane,
     )
+    train_split = 0.8
+    seed = 42
+    total_size = len(train_dataset)
+    train_size = int(train_split * total_size)
+    val_size = total_size - train_size
+    generator = torch.Generator().manual_seed(seed)
+    train_dataset, val_dataset = random_split(train_dataset, [train_size, val_size], generator=generator)
+    
 
-    val_dataset = MultiHDF5Dataset(
-        h5_paths=val_paths,
-        downscale_factor=downscale_factor,
-        model_downscale=model_downscale,
-        model_initial_downscale=model_initial_downscale,
-        used_T=used_T,
-        use_static=use_static,
-        label_smoothing_enabled=label_smoothing_enabled,
-        smooth_bg=smooth_bg,
-        smooth_lane=smooth_lane,
-    )
+    # val_dataset = MultiHDF5Dataset(
+    #     h5_paths=val_paths,
+    #     downscale_factor=downscale_factor,
+    #     model_downscale=model_downscale,
+    #     model_initial_downscale=model_initial_downscale,
+    #     used_T=used_T,
+    #     use_static=use_static,
+    #     label_smoothing_enabled=label_smoothing_enabled,
+    #     smooth_bg=smooth_bg,
+    #     smooth_lane=smooth_lane,
+    # )
 
     test_dataset = MultiHDF5Dataset(
         h5_paths=test_paths,
