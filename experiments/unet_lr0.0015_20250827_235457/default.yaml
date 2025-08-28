@@ -3,7 +3,7 @@ description: >
 
 defaults:
   model: unet # base, unet or lanesnn
-  data: carla # det, carla or demo
+  data: det # det, carla or demo
 
 train:
   epochs: 200

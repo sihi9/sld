@@ -56,8 +56,8 @@ class HDF5Dataset(Dataset):
         self._h5 = h5py.File(self.h5_path, 'r')
         self._X = self._h5['X']
         self._Y = self._h5['Y']
-        self.indices = list(range(self._X.shape[0]))
-        #self.indices = list(range(0, self._X.shape[0], 15))
+        #self.indices = list(range(self._X.shape[0]))
+        self.indices = list(range(0, self._X.shape[0], 15))
         
         if self.filter_fn is not None:
             valid = []
@@ -257,7 +257,7 @@ def build_carla_dataloaders(
 
     return {
         "train": DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, drop_last=True),
-        "val": DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers),
+        "val": DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers),
         "test": DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     }
 

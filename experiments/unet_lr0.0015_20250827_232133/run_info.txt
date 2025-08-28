@@ -1,0 +1,4 @@
+Started: 2025-08-27 23:21:34
+Device: auto
+AMP: False
+Description: Best with carla

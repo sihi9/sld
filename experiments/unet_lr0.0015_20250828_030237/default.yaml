@@ -13,4 +13,4 @@ train:
   save_intermediate: false
 
 log:
-  vis_interval: 20
+  vis_interval: -1

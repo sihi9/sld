@@ -129,7 +129,7 @@ def main():
         visualize_random_batch(model, test_loader, device=device, n=cfg.data.batch_size, logger=logger, step=cfg.train.epochs)
         visualize_predictions_video(
             model=model,
-            dataloader=test_loader,
+            dataloader=val_loader,
             device=device,
             save_dir=f"outputs/{args.experiment_name}",
             all_timesteps=False,

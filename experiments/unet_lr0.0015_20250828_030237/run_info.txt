@@ -1,0 +1,5 @@
+Started: 2025-08-28 03:02:38
+Device: auto
+AMP: False
+Description: DET unet default config
+

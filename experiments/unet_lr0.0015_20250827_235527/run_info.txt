@@ -1,0 +1,4 @@
+Started: 2025-08-27 23:55:27
+Device: auto
+AMP: False
+Description: Best with carla every 15th batchsize 64

@@ -8,7 +8,7 @@ output_timesteps: 1
 soft_reset: true  # use soft reset for neurons
 skip_connections: true 
 analog: false  # use analog skips. Note that this will not work without initial scaling block, as initial neurons would not spike
-initial_scaling: 1  # initial scaling factor for input size, used to calculate downscaling factor
+initial_scaling: 4  # initial scaling factor for input size, used to calculate downscaling factor
 use_plif_encoder: true
 use_plif_recurrent: true
 use_plif_decoder: true

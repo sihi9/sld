@@ -3,14 +3,14 @@
 sbatch run_snn.sh \
     --model unet \
     --data carla \
-    --description "Best with carla" \
+    --description "Best with carla every 15th" \
     --features 16 24 32 48 \
     --initial-scaling 4 \
     --downscale 1 \
     --soft-reset \
-    --fc-bottleneck \
-    --fc-recurrent \
-    --conv-recurrent \
+    --no-fc-bottleneck \
+    --no-fc-recurrent \
+    --no-conv-recurrent \
 # sleep 5
 
 # sbatch run_snn.sh \
