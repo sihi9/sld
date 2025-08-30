@@ -1,16 +1,16 @@
 #!/bin/bash
 
-sbatch run_snn.sh \
-    --model unet \
-    --data carla \
-    --description "Best with carla every 15th" \
-    --features 16 24 32 48 \
-    --initial-scaling 4 \
-    --downscale 1 \
-    --soft-reset \
-    --no-fc-bottleneck \
-    --no-fc-recurrent \
-    --no-conv-recurrent \
+# sbatch run_snn.sh \
+#     --model unet \
+#     --data carla \
+#     --description "Best with carla every 15th" \
+#     --features 16 24 32 48 \
+#     --initial-scaling 4 \
+#     --downscale 1 \
+#     --soft-reset \
+#     --no-fc-bottleneck \
+#     --no-fc-recurrent \
+#     --no-conv-recurrent \
 # sleep 5
 
 # sbatch run_snn.sh \
@@ -29,18 +29,18 @@ sbatch run_snn.sh \
 
 
 
-# sbatch run_snn.sh \
-#     --model unet \
-#     --data carla \
-#     --description "Best Carla" \
-#     --features 16 24 32 48 \
-#     --epochs 100 \
-#     --initial-scaling 4 \
-#     --downscale 1 \
-#     --soft-reset \
-#     --fc-bottleneck \
-#     --fc-recurrent \
-#     --conv-recurrent \
+sbatch run_snn.sh \
+    --model unet \
+    --data det \
+    --description "Recurrent DET rerun 4" \
+    --features 16 24 32 48 \
+    --epochs 200 \
+    --initial-scaling 4 \
+    --downscale 1 \
+    --soft-reset \
+    --fc-bottleneck \
+    --fc-recurrent \
+    --conv-recurrent \
     
 # sleep 5
 
