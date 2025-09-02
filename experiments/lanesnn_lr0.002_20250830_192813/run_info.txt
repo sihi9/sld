@@ -1,0 +1,4 @@
+Started: 2025-08-30 19:28:13
+Device: auto
+AMP: False
+Description: LaneSNN Rerun 5

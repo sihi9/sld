@@ -1,0 +1,4 @@
+Started: 2025-08-31 14:09:07
+Device: auto
+AMP: False
+Description: Recurrent DET rerun 1

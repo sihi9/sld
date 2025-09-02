@@ -1,0 +1,38 @@
+data:
+  augmentation_intensity: 0.05
+  batch_size: 8
+  downscale: 4
+  label_smoothing:
+    background: 0.05
+    enabled: true
+    lane: 0.95
+  loader: det
+  num_workers: 4
+  static: false
+  use_poisson: false
+  use_static: false
+  used_T: 30
+defaults:
+  data: det
+  model: unet
+description: LaneSNN Rerun 1
+log:
+  vis_interval: 20
+model:
+  analog: false
+  conv_recurrent: false
+  features:
+  - 600
+  hidden_dim: 600
+  init_tau: 1.25
+  initial_scaling: 1
+  name: lanesnn
+  skip_connections: true
+  soft_reset: false
+  use_plif: false
+train:
+  amp: false
+  device: auto
+  epochs: 200
+  lr: 0.002
+  save_intermediate: false

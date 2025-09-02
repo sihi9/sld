@@ -1,0 +1,4 @@
+Started: 2025-08-30 13:15:42
+Device: auto
+AMP: False
+Description: Best with new carla every 15th

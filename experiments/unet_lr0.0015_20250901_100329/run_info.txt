@@ -1,0 +1,4 @@
+Started: 2025-09-01 10:03:29
+Device: auto
+AMP: False
+Description: Basic analog with new carla every 10th rerun 1

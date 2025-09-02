@@ -1,12 +1,12 @@
-loader: carla
-batch_size: 16
+loader: det
+batch_size: 8
 num_workers: 4
 downscale: 1
 used_T: 30
 use_static: false
+use_poisson: false
 label_smoothing:
     enabled: true
     background: 0.05
     lane: 0.95
-
-
+augmentation_intensity: 0.05

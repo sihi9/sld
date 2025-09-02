@@ -1,0 +1,135 @@
+==========================================================================================
+Layer (type:depth-idx)                   Output Shape              Param #
+==========================================================================================
+LaneSNN                                  [8, 1, 46, 72]            --
+├─Linear: 1-1                            [8, 600]                  1,987,800
+├─LIFNode: 1-2                           [8, 600]                  --
+├─Linear: 1-3                            [8, 3312]                 1,990,512
+├─LIFNode: 1-4                           [8, 3312]                 --
+├─Linear: 1-5                            [8, 600]                  (recursive)
+├─LIFNode: 1-6                           [8, 600]                  --
+├─Linear: 1-7                            [8, 3312]                 (recursive)
+├─LIFNode: 1-8                           [8, 3312]                 --
+├─Linear: 1-9                            [8, 600]                  (recursive)
+├─LIFNode: 1-10                          [8, 600]                  --
+├─Linear: 1-11                           [8, 3312]                 (recursive)
+├─LIFNode: 1-12                          [8, 3312]                 --
+├─Linear: 1-13                           [8, 600]                  (recursive)
+├─LIFNode: 1-14                          [8, 600]                  --
+├─Linear: 1-15                           [8, 3312]                 (recursive)
+├─LIFNode: 1-16                          [8, 3312]                 --
+├─Linear: 1-17                           [8, 600]                  (recursive)
+├─LIFNode: 1-18                          [8, 600]                  --
+├─Linear: 1-19                           [8, 3312]                 (recursive)
+├─LIFNode: 1-20                          [8, 3312]                 --
+├─Linear: 1-21                           [8, 600]                  (recursive)
+├─LIFNode: 1-22                          [8, 600]                  --
+├─Linear: 1-23                           [8, 3312]                 (recursive)
+├─LIFNode: 1-24                          [8, 3312]                 --
+├─Linear: 1-25                           [8, 600]                  (recursive)
+├─LIFNode: 1-26                          [8, 600]                  --
+├─Linear: 1-27                           [8, 3312]                 (recursive)
+├─LIFNode: 1-28                          [8, 3312]                 --
+├─Linear: 1-29                           [8, 600]                  (recursive)
+├─LIFNode: 1-30                          [8, 600]                  --
+├─Linear: 1-31                           [8, 3312]                 (recursive)
+├─LIFNode: 1-32                          [8, 3312]                 --
+├─Linear: 1-33                           [8, 600]                  (recursive)
+├─LIFNode: 1-34                          [8, 600]                  --
+├─Linear: 1-35                           [8, 3312]                 (recursive)
+├─LIFNode: 1-36                          [8, 3312]                 --
+├─Linear: 1-37                           [8, 600]                  (recursive)
+├─LIFNode: 1-38                          [8, 600]                  --
+├─Linear: 1-39                           [8, 3312]                 (recursive)
+├─LIFNode: 1-40                          [8, 3312]                 --
+├─Linear: 1-41                           [8, 600]                  (recursive)
+├─LIFNode: 1-42                          [8, 600]                  --
+├─Linear: 1-43                           [8, 3312]                 (recursive)
+├─LIFNode: 1-44                          [8, 3312]                 --
+├─Linear: 1-45                           [8, 600]                  (recursive)
+├─LIFNode: 1-46                          [8, 600]                  --
+├─Linear: 1-47                           [8, 3312]                 (recursive)
+├─LIFNode: 1-48                          [8, 3312]                 --
+├─Linear: 1-49                           [8, 600]                  (recursive)
+├─LIFNode: 1-50                          [8, 600]                  --
+├─Linear: 1-51                           [8, 3312]                 (recursive)
+├─LIFNode: 1-52                          [8, 3312]                 --
+├─Linear: 1-53                           [8, 600]                  (recursive)
+├─LIFNode: 1-54                          [8, 600]                  --
+├─Linear: 1-55                           [8, 3312]                 (recursive)
+├─LIFNode: 1-56                          [8, 3312]                 --
+├─Linear: 1-57                           [8, 600]                  (recursive)
+├─LIFNode: 1-58                          [8, 600]                  --
+├─Linear: 1-59                           [8, 3312]                 (recursive)
+├─LIFNode: 1-60                          [8, 3312]                 --
+├─Linear: 1-61                           [8, 600]                  (recursive)
+├─LIFNode: 1-62                          [8, 600]                  --
+├─Linear: 1-63                           [8, 3312]                 (recursive)
+├─LIFNode: 1-64                          [8, 3312]                 --
+├─Linear: 1-65                           [8, 600]                  (recursive)
+├─LIFNode: 1-66                          [8, 600]                  --
+├─Linear: 1-67                           [8, 3312]                 (recursive)
+├─LIFNode: 1-68                          [8, 3312]                 --
+├─Linear: 1-69                           [8, 600]                  (recursive)
+├─LIFNode: 1-70                          [8, 600]                  --
+├─Linear: 1-71                           [8, 3312]                 (recursive)
+├─LIFNode: 1-72                          [8, 3312]                 --
+├─Linear: 1-73                           [8, 600]                  (recursive)
+├─LIFNode: 1-74                          [8, 600]                  --
+├─Linear: 1-75                           [8, 3312]                 (recursive)
+├─LIFNode: 1-76                          [8, 3312]                 --
+├─Linear: 1-77                           [8, 600]                  (recursive)
+├─LIFNode: 1-78                          [8, 600]                  --
+├─Linear: 1-79                           [8, 3312]                 (recursive)
+├─LIFNode: 1-80                          [8, 3312]                 --
+├─Linear: 1-81                           [8, 600]                  (recursive)
+├─LIFNode: 1-82                          [8, 600]                  --
+├─Linear: 1-83                           [8, 3312]                 (recursive)
+├─LIFNode: 1-84                          [8, 3312]                 --
+├─Linear: 1-85                           [8, 600]                  (recursive)
+├─LIFNode: 1-86                          [8, 600]                  --
+├─Linear: 1-87                           [8, 3312]                 (recursive)
+├─LIFNode: 1-88                          [8, 3312]                 --
+├─Linear: 1-89                           [8, 600]                  (recursive)
+├─LIFNode: 1-90                          [8, 600]                  --
+├─Linear: 1-91                           [8, 3312]                 (recursive)
+├─LIFNode: 1-92                          [8, 3312]                 --
+├─Linear: 1-93                           [8, 600]                  (recursive)
+├─LIFNode: 1-94                          [8, 600]                  --
+├─Linear: 1-95                           [8, 3312]                 (recursive)
+├─LIFNode: 1-96                          [8, 3312]                 --
+├─Linear: 1-97                           [8, 600]                  (recursive)
+├─LIFNode: 1-98                          [8, 600]                  --
+├─Linear: 1-99                           [8, 3312]                 (recursive)
+├─LIFNode: 1-100                         [8, 3312]                 --
+├─Linear: 1-101                          [8, 600]                  (recursive)
+├─LIFNode: 1-102                         [8, 600]                  --
+├─Linear: 1-103                          [8, 3312]                 (recursive)
+├─LIFNode: 1-104                         [8, 3312]                 --
+├─Linear: 1-105                          [8, 600]                  (recursive)
+├─LIFNode: 1-106                         [8, 600]                  --
+├─Linear: 1-107                          [8, 3312]                 (recursive)
+├─LIFNode: 1-108                         [8, 3312]                 --
+├─Linear: 1-109                          [8, 600]                  (recursive)
+├─LIFNode: 1-110                         [8, 600]                  --
+├─Linear: 1-111                          [8, 3312]                 (recursive)
+├─LIFNode: 1-112                         [8, 3312]                 --
+├─Linear: 1-113                          [8, 600]                  (recursive)
+├─LIFNode: 1-114                         [8, 600]                  --
+├─Linear: 1-115                          [8, 3312]                 (recursive)
+├─LIFNode: 1-116                         [8, 3312]                 --
+├─Linear: 1-117                          [8, 600]                  (recursive)
+├─LIFNode: 1-118                         [8, 600]                  --
+├─Linear: 1-119                          [8, 3312]                 (recursive)
+├─LIFNode: 1-120                         [8, 3312]                 --
+==========================================================================================
+Total params: 3,978,312
+Trainable params: 3,978,312
+Non-trainable params: 0
+Total mult-adds (M): 954.79
+==========================================================================================
+Input size (MB): 3.18
+Forward/backward pass size (MB): 7.51
+Params size (MB): 15.91
+Estimated Total Size (MB): 26.60
+==========================================================================================
